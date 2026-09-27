@@ -1,0 +1,210 @@
+:root {
+    --verde-institucional: #3f4d2a;
+    --verde-oscuro: #2c3620;
+    --verde-claro: #6b8046;
+    --dorado: #c9a227;
+    --dorado-claro: #e8cf7a;
+    --crema: #faf8f2;
+    --texto: #33362e;
+    --azul-institucional: #3f4d2a;
+    --azul-claro: #6b8046;
+    --gris-claro: #f4f6f8;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    background-color: var(--crema);
+    font-family: 'Inter', -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    color: var(--texto);
+}
+
+h1, h2, h3, h4, h5, h6,
+.fw-serif, .card-header, .encabezado h4, .encabezado h5 {
+    font-family: 'Playfair Display', Georgia, serif;
+}
+
+#app-wrapper { min-height: 100vh; }
+
+/* ===== SIDEBAR ===== */
+.sidebar-municipal {
+    width: 260px;
+    min-height: 100vh;
+    background: linear-gradient(180deg, var(--verde-institucional), var(--verde-oscuro));
+    box-shadow: 4px 0 20px rgba(0,0,0,.15);
+    position: relative;
+}
+
+.sidebar-municipal::after {
+    content: "";
+    position: absolute;
+    top: 0; right: 0;
+    width: 3px; height: 100%;
+    background: linear-gradient(180deg, var(--dorado), transparent 80%);
+}
+
+.sidebar-municipal img {
+    border-radius: 50%;
+    background: #fff;
+    padding: 6px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.35);
+    border: 2px solid var(--dorado-claro);
+}
+
+.sidebar-municipal h6 {
+    font-family: 'Playfair Display', serif;
+    letter-spacing: .5px;
+}
+
+.sidebar-municipal .nav-link {
+    color: rgba(255,255,255,.85);
+    border-radius: .6rem;
+    padding: .65rem 1rem;
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    transition: all .15s ease;
+}
+
+.sidebar-municipal .nav-link:hover {
+    background: rgba(255,255,255,.08);
+    color: #fff;
+    border-left-color: var(--dorado);
+}
+
+.sidebar-municipal .nav-link.active {
+    background: var(--crema);
+    color: var(--verde-institucional);
+    font-weight: 700;
+    border-left-color: var(--dorado);
+    box-shadow: 0 4px 14px rgba(0,0,0,.2);
+}
+
+.sidebar-municipal form button {
+    color: rgba(255,255,255,.7) !important;
+}
+.sidebar-municipal form button:hover {
+    color: var(--dorado-claro) !important;
+}
+
+/* ===== HEADER ===== */
+.header-municipal {
+    background: #fff;
+    border-bottom: 2px solid var(--dorado-claro);
+    box-shadow: 0 2px 10px rgba(0,0,0,.03);
+}
+
+.header-municipal h5 {
+    font-weight: 700;
+    color: var(--verde-institucional);
+}
+
+/* ===== TARJETAS ===== */
+.card {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,.06);
+}
+
+.card-metric {
+    position: relative;
+    overflow: hidden;
+    border-top: 3px solid var(--dorado);
+}
+
+.card-header {
+    background: #fff;
+    border-bottom: 1px solid #eee;
+    font-weight: 700;
+    color: var(--verde-institucional);
+}
+
+/* ===== BOTONES ===== */
+.btn-primary {
+    background: var(--verde-institucional);
+    border-color: var(--verde-institucional);
+    border-radius: .6rem;
+    font-weight: 600;
+    padding: .55rem 1.4rem;
+}
+.btn-primary:hover, .btn-primary:focus {
+    background: var(--verde-oscuro);
+    border-color: var(--verde-oscuro);
+}
+.btn-outline-primary {
+    color: var(--verde-institucional);
+    border-color: var(--verde-institucional);
+    border-radius: .6rem;
+}
+.btn-outline-primary:hover {
+    background: var(--verde-institucional);
+    border-color: var(--verde-institucional);
+}
+.btn-outline-dark, .btn-outline-secondary {
+    border-radius: .6rem;
+}
+
+/* ===== BADGES / ESTADO ===== */
+.badge-bloqueada {
+    background: linear-gradient(135deg, var(--dorado-claro), var(--dorado));
+    color: #4a3800;
+    border: none;
+    padding: .6rem 1.1rem;
+    border-radius: 2rem;
+    font-weight: 700;
+    letter-spacing: .5px;
+    box-shadow: 0 4px 12px rgba(201,162,39,.35);
+}
+
+/* ===== FICHA DE ACTA (certificado) ===== */
+.certificado {
+    background: #fff;
+    border-radius: 1.2rem;
+    box-shadow: 0 20px 50px rgba(0,0,0,.08);
+    border-top: 6px solid var(--dorado);
+    overflow: hidden;
+}
+
+.certificado-encabezado {
+    text-align: center;
+    padding: 2rem 1rem 1.5rem;
+    background: linear-gradient(180deg, #fbf9f3, #fff);
+    border-bottom: 1px dashed var(--dorado-claro);
+}
+
+.certificado-encabezado .subtitulo {
+    letter-spacing: 2px;
+    font-size: .75rem;
+    color: var(--dorado);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.dato-label {
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    font-size: .72rem;
+    color: var(--dorado);
+    font-weight: 700;
+    margin-bottom: .15rem;
+}
+
+.dato-valor {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    color: var(--texto);
+    font-weight: 600;
+}
+
+.login-bg { background: linear-gradient(135deg, var(--verde-institucional), var(--verde-claro)); }
+.login-card { width: 100%; max-width: 440px; border: none; border-radius: 1.2rem; box-shadow: 0 30px 60px rgba(0,0,0,.3); }
+
+@media print {
+    #sidebar, .header-municipal, .no-print { display: none !important; }
+    main { padding: 0 !important; }
+    body { background: #fff !important; }
+}
+
+@media (max-width: 768px) {
+    .sidebar-municipal { position: fixed; z-index: 1000; transform: translateX(-100%); transition: .2s; }
+    .sidebar-municipal.abierto { transform: translateX(0); }
+}

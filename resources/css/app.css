@@ -1,0 +1,56 @@
+:root {
+    --azul-institucional: #0b3d66;
+    --azul-claro: #1d5f9e;
+    --gris-claro: #f4f6f8;
+}
+
+body {
+    background-color: var(--gris-claro);
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+#app-wrapper { min-height: 100vh; }
+
+.sidebar-municipal {
+    width: 250px;
+    min-height: 100vh;
+    background: linear-gradient(180deg, var(--azul-institucional), var(--azul-claro));
+}
+
+.sidebar-municipal .nav-link {
+    color: rgba(255,255,255,.85);
+    border-radius: .5rem;
+}
+
+.sidebar-municipal .nav-link:hover { background: rgba(255,255,255,.1); color: #fff; }
+.sidebar-municipal .nav-link.active { background: #fff; color: var(--azul-institucional); font-weight: 600; }
+
+.header-municipal {
+    background: #fff;
+    border-bottom: 1px solid #e5e9ee;
+}
+
+.login-bg { background: linear-gradient(135deg, var(--azul-institucional), var(--azul-claro)); }
+.login-card { width: 100%; max-width: 420px; border: none; border-radius: 1rem; }
+
+.card-metric { position: relative; overflow: hidden; }
+
+.badge-bloqueada {
+    background: #fff3cd;
+    color: #7a5b00;
+    border: 1px solid #ffe08a;
+    padding: .5rem .75rem;
+    border-radius: .5rem;
+    font-weight: 600;
+}
+
+@media print {
+    #sidebar, .header-municipal, .no-print { display: none !important; }
+    main { padding: 0 !important; }
+    body { background: #fff !important; }
+}
+
+@media (max-width: 768px) {
+    .sidebar-municipal { position: fixed; z-index: 1000; transform: translateX(-100%); transition: .2s; }
+    .sidebar-municipal.abierto { transform: translateX(0); }
+}
