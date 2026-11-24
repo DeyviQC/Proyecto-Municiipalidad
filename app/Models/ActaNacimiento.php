@@ -12,37 +12,24 @@ class ActaNacimiento extends Model
 
     protected $table = 'acta_nacimientos';
 
-    protected $fillable = [
-        'acta_id',
-        'nombres',
-        'apellido_paterno',
-        'apellido_materno',
-        'dni',
-        'fecha_nacimiento',
-        'hora_nacimiento',
-        'lugar_nacimiento',
-        'sexo',
-        'nombre_padre',
-        'dni_padre',
-        'nombre_madre',
-        'dni_madre',
-        'observaciones',
-    ];
+    protected $fillable = ['acta_id', 'apellido_nombre', 'dni', 'dni_no_consignado', 'fecha_nacimiento', 'observaciones'];
+
+    public const CAMPOS_FILIACION = ['madre_nombre', 'madre_nombre_estado', 'madre_dni', 'madre_dni_estado', 'padre_nombre', 'padre_nombre_estado', 'padre_dni', 'padre_dni_estado'];
+    public const ESTADOS_FILIACION = ['PENDIENTE' => 'Pendiente de revisar', 'REGISTRADO' => 'Registrado', 'NO_CONSIGNADO' => 'No consignado en el acta', 'DESCONOCIDO' => 'No se conoce (según el acta)', 'ILEGIBLE' => 'No legible en el documento'];
+
+    public function __construct(array $attributes = [])
+    {
+        $this->fillable = array_merge($this->fillable, self::CAMPOS_FILIACION);
+        parent::__construct($attributes);
+    }
 
     protected function casts(): array
     {
-        return [
-            'fecha_nacimiento' => 'date',
-        ];
+        return ['fecha_nacimiento' => 'date', 'dni_no_consignado' => 'boolean', 'filiacion_version' => 'integer'];
     }
 
     public function acta(): BelongsTo
     {
         return $this->belongsTo(Acta::class);
-    }
-
-    public function getNombreCompletoAttribute(): string
-    {
-        return trim("{$this->nombres} {$this->apellido_paterno} {$this->apellido_materno}");
     }
 }

@@ -25,7 +25,7 @@ class PdfController extends Controller
     {
         $this->authorize('view', $acta);
 
-        if (! $this->pdfStorageService->existe($acta->pdf_ruta)) {
+        if (! $acta->pdf_ruta || ! $this->pdfStorageService->existe($acta->pdf_ruta)) {
             abort(404, 'El documento PDF no se encuentra disponible en el servidor.');
         }
 
@@ -40,7 +40,12 @@ class PdfController extends Controller
 
         return response($contenido, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $acta->pdf_original . '"',
+            // makeDisposition escapes quotes and adds a UTF-8 filename* for names with accents.
+            'Content-Disposition' => \Symfony\Component\HttpFoundation\HeaderUtils::makeDisposition(
+                'inline',
+                $acta->pdf_original ?: 'acta.pdf',
+                \Illuminate\Support\Str::ascii($acta->pdf_original ?: 'acta.pdf') ?: 'acta.pdf'
+            ),
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, no-store',
         ]);

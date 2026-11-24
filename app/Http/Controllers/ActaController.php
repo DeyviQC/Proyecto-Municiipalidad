@@ -28,20 +28,31 @@ class ActaController extends Controller
         $this->authorize('viewAny', Acta::class);
 
         $filtros = $request->only([
-            'numero_acta', 'anio', 'tipo', 'dni', 'nombre', 'apellido',
-            'fecha_desde', 'fecha_hasta',
+            'numero_acta', 'anio', 'tipo', 'dni', 'nombre',
+            'sobre', 'correlativo', 'fecha_desde', 'fecha_hasta',
         ]);
 
         $actas = $this->actaService->buscar($filtros);
 
-        return view('actas.index', compact('actas', 'filtros'));
+        $incidencias = app(\App\Services\IncidenciaService::class)->todas()
+            ->whereIn('estado', \App\Services\IncidenciaService::ESTADOS_VISIBLES)->keyBy('acta_id');
+        return view('actas.index', compact('actas', 'filtros', 'incidencias'));
     }
 
     public function create()
     {
         $this->authorize('create', Acta::class);
 
-        return view('actas.create');
+        $siguientes = \Illuminate\Support\Facades\DB::table('acta_secuencias')->get()->mapWithKeys(function ($fila) {
+            $orden = $fila->ultimo + 1;
+            $ultimo = Acta::where('tipo', $fila->tipo)->orderByDesc('orden_tipo')->first();
+            $sobre = $ultimo ? (int) $ultimo->sobre : 1;
+            $correlativo = $ultimo ? $ultimo->correlativo + 1 : 1;
+            if ($correlativo > 25) { $sobre++; $correlativo = 1; }
+            return [$fila->tipo => ['orden' => $orden, 'sobre' => max(1, $sobre), 'correlativo' => $correlativo]];
+        });
+
+        return view('actas.create', compact('siguientes'));
     }
 
     /**
@@ -53,6 +64,7 @@ class ActaController extends Controller
         $this->authorize('create', Acta::class);
 
         $datosActa = $request->validated();
+        $datosActa['anio'] = \Carbon\Carbon::parse($datosActa['fecha_acta'])->year;
         $tipo = $datosActa['tipo'];
 
         // Validamos el sub-formulario correspondiente al tipo de acta,
@@ -63,22 +75,48 @@ class ActaController extends Controller
             Acta::TIPO_DEFUNCION => (new StoreDefuncionRequest())->rules(),
         };
 
-        $datosDetalle = $request->validate($reglasDetalle);
+        $datosDetalle = array_intersect_key($datosActa, $reglasDetalle);
+        if (in_array($tipo, [Acta::TIPO_NACIMIENTO, Acta::TIPO_DEFUNCION])) {
+            $datosDetalle['dni_no_consignado'] = $request->boolean('dni_no_consignado');
+            if ($datosDetalle['dni_no_consignado']) { $datosDetalle['dni'] = null; }
+        }
 
         try {
             $acta = $this->actaService->registrar(
                 $datosActa,
                 $datosDetalle,
-                $request->file('pdf'),
+                $request->file('pdf'), // PDF obligatorio para todos los tipos
                 $request->user()
             );
         } catch (ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         }
 
-        return redirect()
-            ->route('actas.show', $acta)
-            ->with('exito', 'Acta registrada correctamente. El acta ha sido bloqueada y queda disponible únicamente para consulta.');
+        $mensaje = 'Registro guardado con su PDF adjunto.';
+
+        return redirect()->route('actas.show', $acta)->with('exito', $mensaje);
+    }
+
+    /**
+     * Adjunta el PDF firmado/escaneado a una Defunción que estaba en BORRADOR,
+     * lo que la deja bloqueada (REGISTRADA) de forma permanente.
+     */
+    public function completarPdf(Request $request, Acta $acta)
+    {
+        $this->authorize('completar', $acta);
+
+        $request->validate([
+            'pdf' => ['required', 'file', 'mimes:pdf', 'max:' . (int) config('actas.pdf_max_kb', 10240)],
+        ]);
+
+        try {
+            $this->actaService->completarPdf($acta, $request->file('pdf'), $request->user());
+        } catch (ValidationException $e) {
+            return back()->withErrors($e->errors());
+        }
+
+        return redirect()->route('actas.show', $acta)
+            ->with('exito', 'PDF adjuntado correctamente. El acta queda bloqueada y disponible únicamente para consulta.');
     }
 
     public function show(Acta $acta)
@@ -94,7 +132,8 @@ class ActaController extends Controller
             "Consulta del acta {$acta->tipo} N° {$acta->numero_acta}/{$acta->anio}."
         );
 
-        return view('actas.show', compact('acta'));
+        $incidencias = app(\App\Services\IncidenciaService::class)->todas()->where('acta_id', $acta->id);
+        return view('actas.show', compact('acta', 'incidencias'));
     }
 
     /**
@@ -113,9 +152,8 @@ class ActaController extends Controller
             "Impresión del acta {$acta->tipo} N° {$acta->numero_acta}/{$acta->anio}."
         );
 
-        return view('actas.print', compact('acta'));
+        return view('pdf.imprimir', compact('acta'));
     }
-
     /**
      * Bloqueo explícito: nunca se expone update/destroy en las rutas
      * (ver routes/web.php), pero además la Policy lo niega siempre.

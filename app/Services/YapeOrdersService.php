@@ -1,0 +1,86 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\PagoTramite;
+use Illuminate\Support\Facades\{DB, Http};
+use Illuminate\Support\Str;
+
+class YapeOrdersService
+{
+    private function http() {
+        return Http::acceptJson()->withOptions(PortalHttpOptions::trusted())->timeout(20)->connectTimeout(5);
+    }
+
+    public function disponible(): bool {
+        return app(MercadoPagoService::class)->disponible()
+            && preg_match('/^(APP_USR-|TEST-)[A-Za-z0-9_-]+$/D', (string) config('mercadopago.public_key'));
+    }
+
+    public function ejecutar(PagoTramite $pago, string $celular): string {
+        abort_unless($this->disponible() && preg_match('/^11111111[1-8]$/D', $celular)
+            && $pago->importe_centimos === (int) config('portal.tarifa_centimos'), 422);
+        $http = $this->http()->withToken(config('mercadopago.access_token'));
+        // Verify the seller on every attempt: a prefix alone is not proof of test credentials.
+        $seller = $http->get('https://api.mercadopago.com/users/me');
+        throw_unless($seller->successful() && $seller->json('site_id') === 'MPE'
+            && (string) $seller->json('id') === (string) config('mercadopago.collector_id')
+            && in_array('test_user', (array) $seller->json('tags'), true), \RuntimeException::class, 'Cuenta de prueba no verificada.');
+        if (!$pago->yape_intento) {
+            $token = $this->http()->post('https://api.mercadopago.com/platforms/pci/yape/v1/payment?'.http_build_query([
+                'public_key' => config('mercadopago.public_key'),
+            ]), ['phoneNumber' => $celular, 'otp' => '123456', 'requestId' => (string) Str::uuid()]);
+            throw_unless($token->successful() && is_string($token->json('id'))
+                && preg_match('/^[A-Za-z0-9_-]{1,200}$/D', $token->json('id')), \RuntimeException::class, 'No se pudo generar el token de prueba.');
+            // Persist BEFORE sending: a timeout never causes a new order on the next click.
+            $pago->update(['yape_intento' => (string) Str::uuid()]);
+            $amount = number_format($pago->importe_centimos / 100, 2, '.', '');
+            $response = $http->withHeaders(['X-Idempotency-Key' => $pago->yape_intento])->post('https://api.mercadopago.com/v1/orders', [
+                'type' => 'online', 'external_reference' => $pago->idempotencia,
+                'processing_mode' => 'automatic', 'total_amount' => $amount,
+                'payer' => ['email' => 'test_payer@example.com', 'entity_type' => 'individual',
+                    'identification' => ['type' => 'DNI', 'number' => '12345678'],
+                    'phone' => ['area_code' => '51', 'number' => $celular]],
+                'transactions' => ['payments' => [['amount' => $amount,
+                    'payment_method' => ['id' => 'yape', 'type' => 'debit_card', 'token' => $token->json('id')]]]],
+            ]);
+            $id = $response->json('id');
+            throw_unless($response->successful() && is_string($id) && preg_match('/^ORD[A-Za-z0-9]{1,100}$/D', $id), \RuntimeException::class, 'Orden pendiente de reconciliar.');
+            $pago->update(['yape_order_id' => $id]);
+        }
+        throw_unless($pago->yape_order_id, \RuntimeException::class, 'Intento pendiente de reconciliar.');
+        // Never approve from browser data or just the create response: read the order back.
+        $result = $http->get('https://api.mercadopago.com/v1/orders/'.$pago->yape_order_id);
+        $data = $result->json();
+        throw_unless($result->successful() && is_array($data), \RuntimeException::class, 'No se pudo comprobar la orden.');
+        abort_unless(($data['id'] ?? '') === $pago->yape_order_id
+            && ($data['external_reference'] ?? '') === $pago->idempotencia
+            && (string) ($data['user_id'] ?? '') === (string) config('mercadopago.collector_id')
+            && ($data['currency'] ?? '') === 'PEN' && ($data['country_code'] ?? '') === 'PER'
+            && $this->centimos($data['total_amount'] ?? null) === $pago->importe_centimos, 422);
+        if (($data['status'] ?? '') === 'failed') return 'rechazado';
+        if (($data['status'] ?? '') !== 'processed' || ($data['status_detail'] ?? '') !== 'accredited') return 'pendiente';
+        $payments = $data['transactions']['payments'] ?? [];
+        abort_unless(count($payments) === 1
+            && ($payments[0]['payment_method']['id'] ?? '') === 'yape'
+            && ($payments[0]['status'] ?? '') === 'processed'
+            && ($payments[0]['status_detail'] ?? '') === 'accredited'
+            && $this->centimos($payments[0]['paid_amount'] ?? null) === $pago->importe_centimos
+            && $this->centimos($data['total_paid_amount'] ?? null) === $pago->importe_centimos, 422);
+        DB::transaction(function () use ($pago) {
+            $actual = PagoTramite::lockForUpdate()->findOrFail($pago->id);
+            if ($actual->estado === 'PAGADO') return;
+            $tramite = $actual->tramite()->lockForUpdate()->firstOrFail();
+            abort_unless($tramite->estado === 'PENDIENTE_PAGO', 409);
+            $actual->update(['estado' => 'PAGADO', 'pagado_at' => now()]);
+            $tramite->update(['estado' => 'PENDIENTE', 'version' => $tramite->version + 1]);
+            $tramite->eventos()->create(['estado' => 'PENDIENTE', 'mensaje' => 'Simulación Yape confirmada por Mercado Pago Orders. Sin cobro real. Pendiente de revisión municipal.']);
+        });
+        return 'aprobado';
+    }
+
+    private function centimos($value): ?int {
+        if (!is_scalar($value) || !preg_match('/^[0-9]+(?:\.[0-9]{1,2})?$/D', (string) $value)) return null;
+        return (int) round((float) $value * 100);
+    }
+}

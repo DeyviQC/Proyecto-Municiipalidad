@@ -19,3 +19,15 @@ npm-debug.log
 yarn-error.log
 .idea
 .vscode
+/tmp/tunel/
+
+# Material de trabajo local: puede contener datos personales de actas reales.
+/storage/app/*
+!/storage/app/private/
+!/storage/app/public/
+/storage/app/public/*
+!/storage/app/public/.gitignore
+/tmp/
+/output/
+/docs/propuesta/*.docx
+/docs/propuesta/~$*

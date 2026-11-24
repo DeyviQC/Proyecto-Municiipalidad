@@ -41,10 +41,14 @@ class ActaTest extends TestCase
     {
         return array_merge([
             'tipo' => Acta::TIPO_NACIMIENTO,
+            'madre_nombre_estado' => 'REGISTRADO', 'madre_nombre' => 'Madre Ficticia', 'madre_dni_estado' => 'REGISTRADO', 'madre_dni' => '23456789',
+            'padre_nombre_estado' => 'REGISTRADO', 'padre_nombre' => 'Padre Ficticio', 'padre_dni_estado' => 'NO_CONSIGNADO',
             'numero_acta' => '00125',
             'anio' => 2026,
             'fecha_acta' => '2026-05-20',
-            'nombres' => 'Juan',
+            'apellido_nombre' => 'Pérez López Juan',
+            'sobre' => 'SOBRE-1',
+            'correlativo' => 1,
             'apellido_paterno' => 'Pérez',
             'apellido_materno' => 'López',
             'dni' => '12345678',
@@ -109,7 +113,7 @@ class ActaTest extends TestCase
         ));
 
         $respuesta = $this->actingAs($usuario)->post('/actas', array_merge(
-            $this->datosNacimiento(['numero_acta' => '00999']),
+            $this->datosNacimiento(['numero_acta' => '00999', 'correlativo' => 2]),
             ['pdf' => UploadedFile::fake()->createWithContent('doc2.pdf', $mismoContenido)]
         ));
 
@@ -157,6 +161,10 @@ class ActaTest extends TestCase
 
         $respuesta->assertOk();
         $respuesta->assertHeader('Content-Type', 'application/pdf');
+        $this->actingAs($usuario)->get("/actas/{$acta->id}/print")
+            ->assertOk()->assertViewIs('pdf.imprimir')
+            ->assertSee('window.print()', false)
+            ->assertSee(route('actas.pdf', $acta), false);
     }
 
     public function test_puede_buscar_actas_por_numero(): void

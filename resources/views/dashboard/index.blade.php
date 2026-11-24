@@ -1,11 +1,13 @@
 @extends('layouts.app')
 
-@section('titulo', 'Dashboard')
+@section('titulo', 'Inicio')
+@section('descripcion', 'Consulte el total de actas, los últimos registros y las actividades recientes.')
 
 @section('contenido')
+<nav class="dashboard-actions" aria-label="Acciones frecuentes"><a href="{{ route('atencion.index') }}" class="btn btn-primary"><i class="bi bi-inbox me-2" aria-hidden="true"></i>Atender solicitudes</a><a href="{{ route('actas.index') }}" class="btn btn-outline-primary"><i class="bi bi-search me-2" aria-hidden="true"></i>Buscar un acta</a><a href="{{ route('actas.create') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-plus me-2" aria-hidden="true"></i>Registrar acta</a></nav>
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card card-metric border-0 shadow-sm">
+        <div class="card card-metric metric-nacimiento border-0 shadow-sm">
             <div class="card-body">
                 <div class="text-muted small">Nacimientos</div>
                 <div class="fs-2 fw-bold text-primary">{{ number_format($estadisticas['nacimientos']) }}</div>
@@ -14,7 +16,7 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card card-metric border-0 shadow-sm">
+        <div class="card card-metric metric-matrimonio border-0 shadow-sm">
             <div class="card-body">
                 <div class="text-muted small">Matrimonios</div>
                 <div class="fs-2 fw-bold text-success">{{ number_format($estadisticas['matrimonios']) }}</div>
@@ -23,7 +25,7 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card card-metric border-0 shadow-sm">
+        <div class="card card-metric metric-defuncion border-0 shadow-sm">
             <div class="card-body">
                 <div class="text-muted small">Defunciones</div>
                 <div class="fs-2 fw-bold text-secondary">{{ number_format($estadisticas['defunciones']) }}</div>
@@ -42,8 +44,8 @@
     </div>
 </div>
 
-<div class="row g-3">
-    <div class="col-lg-7">
+<div class="row g-3 dashboard-overview">
+    <div class="col-xl-8">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white fw-semibold">
                 <i class="bi bi-clock-history me-1"></i> Últimas actas registradas
@@ -72,8 +74,8 @@
                                 <td>{{ $acta->numero_acta }} / {{ $acta->anio }}</td>
                                 <td>{{ $acta->usuario->name }}</td>
                                 <td class="text-end">
-                                    <a href="{{ route('actas.show', $acta) }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-eye"></i>
+                                    <a href="{{ route('actas.show', $acta) }}" class="btn btn-sm btn-outline-primary" aria-label="Ver acta {{ $acta->numero_acta }} de {{ $acta->anio }}">
+                                        <i class="bi bi-eye" aria-hidden="true"></i><span class="visually-hidden">Ver acta</span>
                                     </a>
                                 </td>
                             </tr>
@@ -86,7 +88,7 @@
         </div>
     </div>
 
-    <div class="col-lg-5">
+    <div class="col-xl-4">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white fw-semibold">
                 <i class="bi bi-activity me-1"></i> Actividad reciente
@@ -95,7 +97,7 @@
                 @forelse ($actividadReciente as $registro)
                     <li class="list-group-item d-flex justify-content-between align-items-start">
                         <div>
-                            <div class="fw-semibold small">{{ $registro->accion }}</div>
+                            <div class="fw-semibold small">{{ $registro->accion_legible }}</div>
                             <div class="text-muted small">{{ $registro->usuario->name ?? 'Sistema' }} — {{ $registro->descripcion }}</div>
                         </div>
                         <small class="text-muted text-nowrap ms-2">{{ $registro->created_at->diffForHumans() }}</small>

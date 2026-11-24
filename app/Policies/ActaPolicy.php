@@ -31,6 +31,17 @@ class ActaPolicy
     {
         return false; // Inmutable. Sin excepciones.
     }
+    
+    /**
+     * Permite adjuntar el PDF firmado SOLO si el acta sigue en BORRADOR.
+     * Una vez REGISTRADA, ni esto se permite (vuelve a ser inmutable).
+     */
+    public function completar(User $user, Acta $acta): bool
+    {
+        return $user->is_active
+            && ($user->isAdmin() || $user->isAsistente())
+            && $acta->esBorrador();
+    }
 
     public function delete(User $user, Acta $acta): bool
     {

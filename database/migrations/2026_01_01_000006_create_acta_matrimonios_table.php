@@ -12,27 +12,37 @@ return new class extends Migration
             $table->id();
             $table->foreignId('acta_id')->constrained('actas')->cascadeOnDelete();
 
-            // Contrayente 1
-            $table->string('c1_nombres', 100);
-            $table->string('c1_apellido_paterno', 80);
-            $table->string('c1_apellido_materno', 80);
-            $table->string('c1_dni', 15)->nullable();
-            $table->date('c1_fecha_nacimiento');
-
-            // Contrayente 2
-            $table->string('c2_nombres', 100);
-            $table->string('c2_apellido_paterno', 80);
-            $table->string('c2_apellido_materno', 80);
-            $table->string('c2_dni', 15)->nullable();
-            $table->date('c2_fecha_nacimiento');
-
+            // ---- Registro simple (lo que ya ten\u00edan) ----
+            $table->string('apellido_nombre', 250);
+            $table->string('dni', 40)->nullable();
             $table->date('fecha_matrimonio');
-            $table->string('lugar_matrimonio', 150);
             $table->text('observaciones')->nullable();
+
+            // ---- Datos adicionales OPCIONALES (solo si van a generar el documento) ----
+            $table->string('lugar_celebracion', 200)->nullable();
+            $table->string('expediente', 60)->nullable();
+
+            $table->string('c1_prenombres', 100)->nullable();
+            $table->string('c1_apellido1', 80)->nullable();
+            $table->string('c1_apellido2', 80)->nullable();
+            $table->string('c1_dni', 20)->nullable();
+            $table->unsignedTinyInteger('c1_edad')->nullable();
+            $table->string('c1_estado_civil', 30)->nullable();
+            $table->string('c1_nacionalidad', 60)->nullable();
+            $table->string('c1_lugar_nacimiento', 200)->nullable();
+
+            $table->string('c2_prenombres', 100)->nullable();
+            $table->string('c2_apellido1', 80)->nullable();
+            $table->string('c2_apellido2', 80)->nullable();
+            $table->string('c2_dni', 20)->nullable();
+            $table->unsignedTinyInteger('c2_edad')->nullable();
+            $table->string('c2_estado_civil', 30)->nullable();
+            $table->string('c2_nacionalidad', 60)->nullable();
+            $table->string('c2_lugar_nacimiento', 200)->nullable();
+
             $table->timestamps();
 
-            $table->index('c1_dni');
-            $table->index('c2_dni');
+            $table->index('apellido_nombre');
         });
     }
 

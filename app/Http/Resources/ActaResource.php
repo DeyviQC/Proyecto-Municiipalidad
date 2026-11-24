@@ -13,6 +13,7 @@ class ActaResource extends JsonResource
             'id' => $this->id,
             'codigo' => $this->codigo,
             'numero_acta' => $this->numero_acta,
+            'orden_tipo' => $this->orden_tipo,
             'anio' => $this->anio,
             'tipo' => $this->tipo,
             'fecha_acta' => $this->fecha_acta?->format('Y-m-d'),
