@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\TramitePublico;
+use App\Services\AuditoriaService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+
+class AtencionPublicaController extends Controller
+{
+    public function index(Request $request)
+    {
+        $filtros = $request->validate(['estado' => ['nullable', Rule::in(array_keys(TramitePublico::ESTADOS))], 'solicitud' => 'nullable|integer|min:1|max:2147483647']);
+        $base = TramitePublico::whereHas('pago', fn ($q) => $q->where('estado', 'PAGADO'));
+        $resumen = (clone $base)->selectRaw('estado, COUNT(*) AS total')->groupBy('estado')->pluck('total', 'estado');
+        $tramites = (clone $base)
+            ->when($filtros['estado'] ?? null, fn ($q, $estado) => $q->where('estado', $estado))
+            ->when($filtros['solicitud'] ?? null, fn ($q, $numero) => $q->where('id', $numero))
+            ->latest('id')->paginate(15)->withQueryString();
+        return view('portal.bandeja', compact('tramites', 'resumen', 'filtros'));
+    }
+    public function show(TramitePublico $tramite)
+    {
+        $tramite->load('acta', 'pago', 'eventos');
+        $cruceActual = app(\App\Services\CruceParentescoService::class)->comparar($tramite->acta, $tramite->datos);
+        return view('portal.revision', compact('tramite', 'cruceActual'));
+    }
+    public function atender(Request $request, TramitePublico $tramite, AuditoriaService $auditoria)
+    {
+        $datos = $request->validate(['estado' => ['required', Rule::in(array_keys(TramitePublico::ESTADOS))], 'mensaje' => ['required', 'string', 'max:2000'], 'version' => ['required', 'integer']]);
+        DB::transaction(function () use ($tramite, $datos, $request, $auditoria) {
+            $actual = TramitePublico::lockForUpdate()->findOrFail($tramite->id);
+            if ($actual->version !== (int) $datos['version']) throw ValidationException::withMessages(['version' => 'La solicitud cambió. Recarga antes de decidir.']);
+            if ($actual->pago?->estado !== 'PAGADO' || !in_array($datos['estado'], TramitePublico::TRANSICIONES[$actual->estado] ?? [], true)) throw ValidationException::withMessages(['estado' => 'Cambio de estado no permitido.']);
+            if ($datos['estado'] === 'APROBADA' && $actual->requiereRevisionVinculo()) {
+                $revision = $request->validate([
+                    'vinculo_revisado' => ['accepted'],
+                    'sustento_revision' => ['required', 'string', 'min:10', 'max:1500'],
+                ]);
+                $actual->datos = array_merge($actual->datos, ['revision_vinculo' => [
+                    'usuario_id' => $request->user()->id,
+                    'revisado_at' => now()->toIso8601String(),
+                    'sustento' => $revision['sustento_revision'],
+                    'cruce_parentesco' => app(\App\Services\CruceParentescoService::class)->comparar($actual->acta, $actual->datos),
+                ]]);
+            }
+            $actual->update(['estado' => $datos['estado'], 'version' => $actual->version + 1]);
+            $actual->eventos()->create(['usuario_id' => $request->user()->id, 'estado' => $datos['estado'], 'mensaje' => $datos['mensaje']]);
+            $auditoria->registrar('REVISAR_TRAMITE', 'Portal ciudadano', $actual->id, 'Estado: '.$datos['estado']);
+        });
+        return back()->with('exito', $datos['estado'] === 'APROBADA'
+            ? 'Solicitud aprobada. Continúe con la firma del documento.'
+            : ($datos['estado'] === 'EN_REVISION' ? 'Revisión iniciada.' : 'Respuesta guardada.'));
+    }
+}

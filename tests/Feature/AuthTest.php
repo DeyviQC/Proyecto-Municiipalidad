@@ -44,6 +44,35 @@ class AuthTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_recordarme_recupera_la_sesion_mediante_cookie_y_logout_la_revoca(): void
+    {
+        $usuario = User::factory()->create(['username'=>'recordado','password'=>bcrypt('Clave12345!')]);
+        $usuario->roles()->attach(Role::where('slug',Role::ADMINISTRADOR)->first());
+        $respuesta = $this->post('/login',['username'=>'recordado','password'=>'Clave12345!','remember'=>'on']);
+        $nombreCookie = \Illuminate\Support\Facades\Auth::guard()->getRecallerName();
+        $respuesta->assertCookie($nombreCookie);
+        $cookie = $respuesta->getCookie($nombreCookie);
+        $this->assertGreaterThan(time()+86400,$cookie->getExpiresTime());
+        $this->assertNotEmpty($usuario->fresh()->remember_token);
+        $valor = $cookie->getValue();
+        $this->app['session']->flush();
+        \Illuminate\Support\Facades\Auth::forgetGuards();
+        $this->withCookie($nombreCookie,$valor)->get('/dashboard')->assertOk();
+        $this->assertAuthenticatedAs($usuario);
+        $this->assertTrue(\Illuminate\Support\Facades\Auth::viaRemember());
+        $this->post('/logout')->assertRedirect('/login')->assertCookieExpired($nombreCookie);
+        $this->app['session']->flush();
+        \Illuminate\Support\Facades\Auth::forgetGuards();
+        $this->withCookie($nombreCookie,$valor)->get('/dashboard')->assertRedirect('/login');
+    }
+
+    public function test_sin_recordarme_no_crea_cookie_persistente(): void
+    {
+        $usuario = User::factory()->create(['username'=>'no_recordado','password'=>bcrypt('Clave12345!')]);
+        $respuesta = $this->post('/login',['username'=>'no_recordado','password'=>'Clave12345!']);
+        $respuesta->assertCookieMissing(\Illuminate\Support\Facades\Auth::guard()->getRecallerName());
+    }
+
     public function test_usuario_no_autenticado_es_redirigido_al_login(): void
     {
         $respuesta = $this->get('/dashboard');

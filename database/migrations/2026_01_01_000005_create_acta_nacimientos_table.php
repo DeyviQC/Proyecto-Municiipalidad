@@ -12,25 +12,42 @@ return new class extends Migration
             $table->id();
             $table->foreignId('acta_id')->constrained('actas')->cascadeOnDelete();
 
-            $table->string('nombres', 100);
-            $table->string('apellido_paterno', 80);
-            $table->string('apellido_materno', 80);
+            // ---- Registro simple (lo que ya ten\u00edan) ----
+            $table->string('apellido_nombre', 200);
             $table->string('dni', 15)->nullable();
             $table->date('fecha_nacimiento');
-            $table->time('hora_nacimiento')->nullable();
-            $table->string('lugar_nacimiento', 150);
-            $table->enum('sexo', ['M', 'F']);
-
-            $table->string('nombre_padre', 150)->nullable();
-            $table->string('dni_padre', 15)->nullable();
-            $table->string('nombre_madre', 150)->nullable();
-            $table->string('dni_madre', 15)->nullable();
-
             $table->text('observaciones')->nullable();
+
+            // ---- Datos adicionales OPCIONALES (solo si van a generar el documento) ----
+            $table->enum('sexo', ['M', 'F'])->nullable();
+            $table->time('hora_nacimiento')->nullable();
+            $table->string('localidad', 200)->nullable();
+            $table->string('lugar_ocurrencia', 200)->nullable();
+
+            $table->string('padre_prenombres', 100)->nullable();
+            $table->string('padre_apellido1', 80)->nullable();
+            $table->string('padre_apellido2', 80)->nullable();
+            $table->string('padre_nacionalidad', 60)->nullable();
+            $table->string('padre_dni', 20)->nullable();
+
+            $table->string('madre_prenombres', 100)->nullable();
+            $table->string('madre_apellido1', 80)->nullable();
+            $table->string('madre_apellido2', 80)->nullable();
+            $table->string('madre_nacionalidad', 60)->nullable();
+            $table->string('madre_dni', 20)->nullable();
+            $table->string('madre_domicilio', 200)->nullable();
+
+            $table->string('declarante1_nombre', 150)->nullable();
+            $table->string('declarante1_vinculo', 60)->nullable();
+            $table->string('declarante1_dni', 20)->nullable();
+            $table->string('declarante2_nombre', 150)->nullable();
+            $table->string('declarante2_vinculo', 60)->nullable();
+            $table->string('declarante2_dni', 20)->nullable();
+
             $table->timestamps();
 
             $table->index('dni');
-            $table->index(['apellido_paterno', 'apellido_materno']);
+            $table->index('apellido_nombre');
         });
     }
 

@@ -14,6 +14,11 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\RestablecerContrasena($token));
+    }
+
     protected $fillable = [
         'name',
         'username',
@@ -72,5 +77,10 @@ class User extends Authenticatable
     public function isAsistente(): bool
     {
         return $this->hasRole('asistente');
+    }
+
+    public function isCiudadano(): bool
+    {
+        return $this->hasRole('ciudadano') && !$this->isAdmin() && !$this->isAsistente();
     }
 }

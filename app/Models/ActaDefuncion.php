@@ -12,26 +12,11 @@ class ActaDefuncion extends Model
 
     protected $table = 'acta_defunciones';
 
-    protected $fillable = [
-        'acta_id',
-        'nombres',
-        'apellido_paterno',
-        'apellido_materno',
-        'dni',
-        'fecha_nacimiento',
-        'fecha_defuncion',
-        'lugar_defuncion',
-        'causa_defuncion',
-        'medico_certifica',
-        'observaciones',
-    ];
+    protected $fillable = ['acta_id', 'apellido_nombre', 'dni', 'dni_no_consignado', 'edad', 'fecha_defuncion', 'causa_defuncion'];
 
     protected function casts(): array
     {
-        return [
-            'fecha_nacimiento' => 'date',
-            'fecha_defuncion' => 'date',
-        ];
+        return ['fecha_defuncion' => 'date', 'dni_no_consignado' => 'boolean'];
     }
 
     public function acta(): BelongsTo
@@ -41,6 +26,6 @@ class ActaDefuncion extends Model
 
     public function getNombreCompletoAttribute(): string
     {
-        return trim("{$this->nombres} {$this->apellido_paterno} {$this->apellido_materno}");
+        return (string) $this->apellido_nombre;
     }
 }

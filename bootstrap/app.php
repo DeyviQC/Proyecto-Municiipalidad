@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Keep signed provider payloads byte-for-byte intact before HMAC verification.
+        $middleware->trimStrings(except: [fn ($request) => $request->is('pagos/izipay/retorno', 'pagos/izipay/notificacion')]);
+        $middleware->validateCsrfTokens(except: ['pagos/taypi/notificacion', 'pagos/izipay/retorno', 'pagos/izipay/notificacion', 'pagos/mercadopago/notificacion', 'firma-peru/*/*/parametros', 'firma-peru/*/*/resultado']);
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
             'active' => EnsureUserIsActive::class,

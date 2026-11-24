@@ -4,21 +4,21 @@
 
 @section('contenido')
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
             <strong>ACTA DE {{ $acta->tipo }}</strong>
             <span class="text-muted">N° {{ $acta->numero_acta }}/{{ $acta->anio }}</span>
         </div>
         <div class="btn-group btn-group-sm">
             <button class="btn btn-outline-secondary" id="btnPaginaAnterior"><i class="bi bi-chevron-left"></i> Anterior</button>
-            <span class="btn btn-outline-secondary disabled" id="indicadorPagina">Página 1 / 1</span>
+            <span class="btn btn-outline-secondary disabled" id="indicadorPagina" aria-live="polite">Página 1 / 1</span>
             <button class="btn btn-outline-secondary" id="btnPaginaSiguiente">Siguiente <i class="bi bi-chevron-right"></i></button>
-            <button class="btn btn-outline-secondary" id="btnZoomMenos"><i class="bi bi-zoom-out"></i></button>
-            <button class="btn btn-outline-secondary" id="btnZoomMas"><i class="bi bi-zoom-in"></i></button>
+            <button class="btn btn-outline-secondary" id="btnZoomMenos" aria-label="Reducir zoom"><i class="bi bi-zoom-out" aria-hidden="true"></i></button>
+            <button class="btn btn-outline-secondary" id="btnZoomMas" aria-label="Ampliar zoom"><i class="bi bi-zoom-in" aria-hidden="true"></i></button>
             <a class="btn btn-outline-dark" href="{{ route('actas.print', $acta) }}" target="_blank"><i class="bi bi-printer"></i> Imprimir</a>
         </div>
     </div>
-    <div class="card-body bg-secondary-subtle text-center" style="min-height: 70vh;">
+    <div class="card-body bg-secondary-subtle text-center pdf-document-stage" style="min-height: 70vh;" tabindex="0" role="region" aria-label="Documento PDF. Puede desplazarse para ver toda la página.">
         <canvas id="visorPdfCanvas" class="shadow bg-white"></canvas>
         <p class="text-muted small mt-2" id="mensajeVisor">Cargando documento…</p>
     </div>
@@ -36,6 +36,7 @@ const canvas = document.getElementById('visorPdfCanvas');
 const ctx = canvas.getContext('2d');
 
 function renderizarPagina(numero) {
+    if (!pdfDoc) return;
     pdfDoc.getPage(numero).then(function (pagina) {
         const viewport = pagina.getViewport({ scale: escala });
         canvas.width = viewport.width;

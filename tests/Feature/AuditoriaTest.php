@@ -41,17 +41,19 @@ class AuditoriaTest extends TestCase
 
         $this->actingAs($usuario)->post('/actas', [
             'tipo' => Acta::TIPO_NACIMIENTO,
+            'madre_nombre_estado' => 'NO_CONSIGNADO', 'madre_dni_estado' => 'NO_CONSIGNADO', 'padre_nombre_estado' => 'NO_CONSIGNADO', 'padre_dni_estado' => 'NO_CONSIGNADO',
             'numero_acta' => '00777',
             'anio' => 2026,
             'fecha_acta' => '2026-01-10',
-            'nombres' => 'Ana',
+            'apellido_nombre' => 'Ríos Vega Ana',
+            'dni' => '12345678',
             'apellido_paterno' => 'Ríos',
             'apellido_materno' => 'Vega',
             'fecha_nacimiento' => '2026-01-10',
             'lugar_nacimiento' => 'Hospital Municipal',
             'sexo' => 'F',
             'pdf' => $pdf,
-        ]);
+        ])->assertSessionHasNoErrors()->assertRedirect();
 
         $this->assertDatabaseHas('auditoria', ['accion' => 'CREAR_ACTA', 'usuario_id' => $usuario->id]);
     }

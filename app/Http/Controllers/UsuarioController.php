@@ -122,4 +122,12 @@ class UsuarioController extends Controller
 
         return back()->with('exito', 'Estado del usuario actualizado.');
     }
+
+    public function foto(User $usuario)
+    {
+        $this->authorize('view', $usuario);
+        $disk = \Illuminate\Support\Facades\Storage::disk('local');
+        abort_unless($usuario->foto && $disk->exists($usuario->foto), 404);
+        return response()->file($disk->path($usuario->foto), ['Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
+    }
 }

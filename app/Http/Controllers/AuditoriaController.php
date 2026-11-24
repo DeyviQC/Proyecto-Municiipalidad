@@ -20,7 +20,7 @@ class AuditoriaController extends Controller
             $query->where('accion', $request->input('accion'));
         }
         if ($request->filled('modulo')) {
-            $query->where('modulo', 'like', '%' . $request->input('modulo') . '%');
+            $query->where('modulo', $request->input('modulo'));
         }
         if ($request->filled('fecha_desde')) {
             $query->whereDate('created_at', '>=', $request->input('fecha_desde'));
@@ -32,6 +32,7 @@ class AuditoriaController extends Controller
         $registros = $query->latest('created_at')->paginate(25)->withQueryString();
 
         return view('auditoria.index', [
+            'modulos' => Auditoria::whereNotNull('modulo')->where('modulo', '!=', '')->distinct()->orderBy('modulo')->pluck('modulo'),
             'registros' => $registros,
             'filtros' => $request->only(['usuario_id', 'accion', 'modulo', 'fecha_desde', 'fecha_hasta']),
         ]);

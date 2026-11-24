@@ -20,7 +20,7 @@ class StoreUsuarioRequest extends FormRequest
             'username' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:users,username'],
             'email' => ['required', 'email', 'max:150', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
-            'role' => ['required', 'in:administrador,asistente'],
+            'role' => ['required', 'in:administrador,asistente,ciudadano'],
         ];
     }
 }

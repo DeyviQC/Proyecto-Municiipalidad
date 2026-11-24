@@ -62,6 +62,10 @@ class AuthController extends Controller
 
         $this->auditoriaService->registrar(AuditoriaService::LOGIN, 'Autenticación');
 
+        if (Auth::user()->isCiudadano()) {
+            $request->session()->forget('url.intended');
+            return redirect()->route('ciudadano.solicitudes.index');
+        }
         return redirect()->intended(route('dashboard'));
     }
 
