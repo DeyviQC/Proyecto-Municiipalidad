@@ -18,8 +18,8 @@ class TramitePublico extends Model
         $fecha = $this->acta?->tipo === 'NACIMIENTO' ? $this->acta->nacimiento?->fecha_nacimiento : null;
         return $this->acta?->tipo === 'NACIMIENTO' && (!$fecha || $fecha->gt(now()->subYears(18)));
     }
-    public const ESTADOS = ['PENDIENTE_PAGO' => 'Pendiente de pago', 'PENDIENTE' => 'Pendiente de atención', 'EN_REVISION' => 'En revisión', 'OBSERVADA' => 'Observada', 'APROBADA' => 'Aprobada, pendiente de firma', 'LISTA' => 'Documento listo para descargar', 'RECHAZADA' => 'Rechazada'];
-    public const TRANSICIONES = ['PENDIENTE' => ['EN_REVISION'], 'EN_REVISION' => ['OBSERVADA', 'APROBADA', 'RECHAZADA'], 'OBSERVADA' => ['EN_REVISION'], 'APROBADA' => [], 'RECHAZADA' => []];
+    public const ESTADOS = ['PENDIENTE_PAGO' => 'Pendiente de pago', 'PENDIENTE' => 'Pendiente de atención', 'EN_REVISION' => 'En revisión', 'OBSERVADA' => 'Observada', 'APROBADA' => 'Aprobada, pendiente de firma', 'LISTA' => 'Documento listo para descargar', 'RECHAZADA' => 'Rechazada', 'VENCIDA' => 'Vencida (no se realizó el pago)'];
+    public const TRANSICIONES = ['PENDIENTE' => ['EN_REVISION'], 'EN_REVISION' => ['OBSERVADA', 'APROBADA', 'RECHAZADA'], 'OBSERVADA' => ['EN_REVISION'], 'APROBADA' => [], 'RECHAZADA' => [], 'VENCIDA' => []];
     protected function casts(): array
     {
         return ['datos' => 'encrypted:array', 'aceptado_at' => 'datetime', 'otp_expira_at' => 'datetime', 'otp_enviado_at' => 'datetime', 'email_verificado_at' => 'datetime'];
