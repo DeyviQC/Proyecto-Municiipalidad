@@ -43,6 +43,28 @@ class AvisosMantenimientoRespaldoTest extends TestCase
         Mail::assertNothingSent();
     }
 
+    public function test_aprobar_no_exige_mensaje_pero_observar_o_rechazar_si(): void
+    {
+        Mail::fake();
+        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $asistente = User::factory()->create();
+        $asistente->roles()->attach(Role::where('slug', 'asistente')->firstOrFail());
+        $acta = Acta::factory()->create();
+        \App\Models\ActaNacimiento::create(['acta_id' => $acta->id, 'apellido_nombre' => 'Titular Adulto', 'fecha_nacimiento' => '1990-01-01']);
+        $t = $this->tramite(['estado' => 'EN_REVISION', 'acta_id' => $acta->id,
+            'datos' => ['busqueda' => ['tipo' => 'NACIMIENTO', 'titular' => 'Titular Adulto'], 'relacion' => 'titular']]);
+        $this->pagado($t);
+        $this->actingAs($asistente)->get('/atencion-ciudadana/'.$t->id)->assertOk()
+            ->assertSee('Aprobar solicitud')->assertSee('Observar')->assertSee('Rechazar');
+
+        $this->patch('/atencion-ciudadana/'.$t->id, ['estado' => 'OBSERVADA', 'version' => $t->fresh()->version])
+            ->assertSessionHasErrors('mensaje');
+        $this->patch('/atencion-ciudadana/'.$t->id, ['estado' => 'APROBADA', 'version' => $t->fresh()->version])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('APROBADA', $t->fresh()->estado);
+        $this->assertSame('Tu solicitud fue aprobada. Estamos preparando tu acta firmada.', $t->eventos()->latest('id')->first()->mensaje);
+    }
+
     public function test_el_aviso_no_expone_datos_del_acta_y_enlaza_al_seguimiento(): void
     {
         $html = (new EstadoTramiteMail(42, 'LISTA', 'Documento publicado.'))->render();

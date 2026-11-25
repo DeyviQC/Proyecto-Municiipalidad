@@ -25,7 +25,9 @@ class CanalEntregaTest extends TestCase
         $t->update(['estado' => 'LISTA']);
         $despues = view('portal.canales-entrega', ['tramite' => $t, 'entrega' => []])->render();
         $this->assertStringContainsString('Enviar PDF por correo', $despues);
-        $this->assertStringContainsString('https://wa.me/51912345678', $despues);
+        $this->assertStringContainsString('https://wa.me/51912345678?text=', $despues);
+        $this->assertStringContainsString('ya está lista. Le adjuntamos el documento firmado', $despues);
+        $this->assertStringContainsString('Copiar mensaje', $despues);
         $this->assertStringContainsString('Descargar PDF firmado para adjuntar', $despues);
         Mail::assertNothingSent();
     }

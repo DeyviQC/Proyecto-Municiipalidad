@@ -28,11 +28,27 @@
 </p>
 @if($numeroValido)<p class="review-muted mb-2">+{{ $canales['numero'] }}</p>@endif
 @if($puedeEnviar)
-@if($numeroValido)
-<a href="https://wa.me/{{ $canales['numero'] }}" class="btn btn-outline-success w-100 mb-2" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"><i class="bi bi-whatsapp me-2" aria-hidden="true"></i>Abrir la conversación del solicitante</a>
-@endif
-<a href="{{ route('entrega.archivo', [$tramite, 'firmado']).'?descargar=1' }}" class="review-secondary-link">Descargar PDF firmado para adjuntar</a>
-<p class="review-muted small">Busca el chat por el número de solicitud, adjunta el PDF firmado y pulsa enviar. Abrir el chat no confirma la entrega.</p>
+@php($mensajeListo = 'Hola, le saluda Registro Civil de la Municipalidad Distrital Andrés Avelino Cáceres Dorregaray. Su acta de la solicitud N.º '.str_pad((string) $tramite->id, 6, '0', STR_PAD_LEFT).' ya está lista. Le adjuntamos el documento firmado digitalmente en PDF. También puede descargarlo desde el seguimiento de su trámite. ¡Gracias!')
+<ol class="small ps-3 mb-2">
+  <li class="mb-2"><a href="{{ route('entrega.archivo', [$tramite, 'firmado']).'?descargar=1' }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1" aria-hidden="true"></i>Descargar PDF firmado para adjuntar</a></li>
+  <li class="mb-2">
+    @if($numeroValido)
+    <a href="https://wa.me/{{ $canales['numero'] }}?text={{ rawurlencode($mensajeListo) }}" class="btn btn-sm btn-success" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"><i class="bi bi-whatsapp me-1" aria-hidden="true"></i>Abrir chat con el mensaje listo</a>
+    @else
+    Abre su chat en WhatsApp (búscalo por «solicitud N.º {{ str_pad((string) $tramite->id, 6, '0', STR_PAD_LEFT) }}») y pega el mensaje:
+    @endif
+  </li>
+  <li>Adjunta el PDF y pulsa <strong>Enviar</strong>.</li>
+</ol>
+<div class="border rounded-2 p-2 small bg-light mb-2" data-mensaje-whatsapp>{{ $mensajeListo }}</div>
+<button type="button" class="btn btn-sm btn-outline-secondary w-100" data-copiar-mensaje><i class="bi bi-clipboard me-1" aria-hidden="true"></i>Copiar mensaje</button>
+<script>
+document.querySelectorAll('[data-copiar-mensaje]').forEach(b => b.addEventListener('click', async () => {
+    const texto = b.previousElementSibling.textContent.trim();
+    try { await navigator.clipboard.writeText(texto); b.innerHTML = '<i class="bi bi-check2 me-1"></i>Mensaje copiado'; }
+    catch (e) { b.textContent = 'Selecciona el texto y cópialo (Ctrl+C)'; }
+}));
+</script>
 @else
 <p class="review-muted small mb-0">Cuando publiques el PDF firmado podrás descargarlo aquí para enviarlo en ese chat. Mientras tanto, responde sus consultas con el estado del trámite.</p>
 @endif

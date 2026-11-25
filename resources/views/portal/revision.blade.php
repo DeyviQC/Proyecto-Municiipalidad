@@ -41,10 +41,22 @@ $cruces = ['COINCIDE'=>'Los datos de filiación coinciden','NO_COINCIDE'=>'El v�
 <input type="hidden" name="version" value="{{ $tramite->version }}"><input type="hidden" name="estado" value="EN_REVISION"><input type="hidden" name="mensaje" value="La municipalidad está revisando tu solicitud.">
 <button class="btn btn-success w-100">{{ $tramite->estado === 'OBSERVADA' ? 'Retomar revisión' : 'Iniciar revisión' }}</button></form>
 @else
-<form method="POST" action="{{ route('atencion.atender', $tramite) }}">@csrf @method('PATCH')<input type="hidden" name="version" value="{{ $tramite->version }}">
-<label for="estado" class="form-label">Acción</label><select id="estado" name="estado" class="form-select mb-3">@foreach($transiciones as $estado)<option value="{{ $estado }}" @selected(old('estado') === $estado)>{{ $estados[$estado] }}</option>@endforeach</select>
-@if($tramite->requiereRevisionVinculo())<fieldset class="review-vinculo" id="revision-vinculo"><legend>Revisión del vínculo</legend><p class="review-muted">Completa este bloque al aprobar.</p><div class="form-check mb-3"><input type="checkbox" name="vinculo_revisado" id="vinculo_revisado" class="form-check-input" value="1" @checked(old('vinculo_revisado'))><label for="vinculo_revisado" class="form-check-label">Revisé el vínculo y corresponde autorizar la entrega.</label></div><label for="sustento_revision" class="form-label">Sustento de la revisión</label><textarea name="sustento_revision" id="sustento_revision" class="form-control" rows="3" maxlength="1500">{{ old('sustento_revision') }}</textarea></fieldset>@endif
-<label for="mensaje" class="form-label mt-3">Respuesta al ciudadano</label><textarea id="mensaje" name="mensaje" class="form-control" rows="3" maxlength="2000" placeholder="Indica el resultado o qué necesita completar." required>{{ old('mensaje') }}</textarea><p class="review-muted mt-2">Se mostrará en el seguimiento de su trámite.</p><button class="btn btn-success w-100">Guardar respuesta</button>
+<form method="POST" action="{{ route('atencion.atender', $tramite) }}" data-decision>@csrf @method('PATCH')<input type="hidden" name="version" value="{{ $tramite->version }}">
+@if(in_array('APROBADA', $transiciones, true) && $tramite->requiereRevisionVinculo())<fieldset class="review-vinculo" id="revision-vinculo"><legend>Revisión del vínculo</legend><p class="review-muted">Necesario solo para aprobar.</p><div class="form-check mb-3"><input type="checkbox" name="vinculo_revisado" id="vinculo_revisado" class="form-check-input" value="1" @checked(old('vinculo_revisado'))><label for="vinculo_revisado" class="form-check-label">Revisé el vínculo y corresponde autorizar la entrega.</label></div><label for="sustento_revision" class="form-label">Sustento de la revisión</label><textarea name="sustento_revision" id="sustento_revision" class="form-control" rows="2" maxlength="1500">{{ old('sustento_revision') }}</textarea></fieldset>@endif
+@if(in_array('APROBADA', $transiciones, true))
+<button name="estado" value="APROBADA" class="btn btn-success btn-lg w-100 mt-2"><i class="bi bi-check-circle me-2" aria-hidden="true"></i>Aprobar solicitud</button>
+<p class="review-muted small mt-2">Se avisará al ciudadano y pasarás a la firma.</p>
+@endif
+<details class="mt-3" @if($errors->has('mensaje') || old('mensaje')) open @endif><summary class="fw-semibold">Observar o rechazar</summary>
+<label for="mensaje" class="form-label mt-3">Motivo para el ciudadano</label>
+<textarea id="mensaje" name="mensaje" class="form-control @error('mensaje') is-invalid @enderror" rows="3" maxlength="2000" placeholder="Ej.: Falta acreditar el vínculo con el titular. Envía una copia de tu DNI.">{{ old('mensaje') }}</textarea>
+@error('mensaje')<div class="invalid-feedback">{{ $message }}</div>@enderror
+<p class="review-muted small mt-1">Se mostrará en su seguimiento y le llegará por correo.</p>
+<div class="d-flex gap-2">
+@if(in_array('OBSERVADA', $transiciones, true))<button name="estado" value="OBSERVADA" class="btn btn-outline-warning flex-fill" data-requiere-motivo><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>Observar</button>@endif
+@if(in_array('RECHAZADA', $transiciones, true))<button name="estado" value="RECHAZADA" class="btn btn-outline-danger flex-fill" data-requiere-motivo data-confirmar-rechazo><i class="bi bi-x-circle me-1" aria-hidden="true"></i>Rechazar</button>@endif
+</div>
+</details>
 </form>
 @endif
 @else<p class="review-muted mb-0">Esta solicitud no tiene acciones pendientes.</p>@endif
@@ -53,22 +65,21 @@ $cruces = ['COINCIDE'=>'Los datos de filiación coinciden','NO_COINCIDE'=>'El v�
 @push('scripts')
 <script>
 (() => {
-    const action = document.getElementById('estado');
-    const review = document.getElementById('revision-vinculo');
-    if (!action || !review) return;
-    const update = () => {
-        const aprobar = action.value === 'APROBADA';
-        review.hidden = !aprobar;
-        review.querySelectorAll('input,textarea').forEach(field => {
-            field.disabled = !aprobar;
-            field.required = aprobar;
-        });
-        const sustento = review.querySelector('textarea');
-        if (sustento) sustento.minLength = 10;
-    };
-    action.addEventListener('change', update);
-    update();
+    // Observing or rejecting needs a reason; approving does not.
+    const form = document.querySelector('[data-decision]');
+    if (!form) return;
+    const motivo = form.querySelector('#mensaje');
+    form.querySelectorAll('[data-requiere-motivo]').forEach(boton => boton.addEventListener('click', event => {
+        if (!motivo.value.trim()) {
+            event.preventDefault();
+            motivo.closest('details').open = true;
+            motivo.classList.add('is-invalid');
+            motivo.focus();
+            return;
+        }
+        if (boton.hasAttribute('data-confirmar-rechazo') && !confirm('¿Rechazar la solicitud? Esta decisión no se puede deshacer.')) event.preventDefault();
+    }));
+    motivo.addEventListener('input', () => motivo.classList.remove('is-invalid'));
 })();
 </script>
 @endpush
-

@@ -11,6 +11,12 @@ use Illuminate\Validation\ValidationException;
 
 class AtencionPublicaController extends Controller
 {
+    /** Default message shown to the citizen when the staff member does not write one. */
+    private const MENSAJES = [
+        'EN_REVISION' => 'La municipalidad está revisando tu solicitud.',
+        'APROBADA' => 'Tu solicitud fue aprobada. Estamos preparando tu acta firmada.',
+    ];
+
     public function index(Request $request)
     {
         $filtros = $request->validate(['estado' => ['nullable', Rule::in(array_keys(TramitePublico::ESTADOS))], 'solicitud' => 'nullable|integer|min:1|max:2147483647']);
@@ -30,7 +36,13 @@ class AtencionPublicaController extends Controller
     }
     public function atender(Request $request, TramitePublico $tramite, AuditoriaService $auditoria)
     {
-        $datos = $request->validate(['estado' => ['required', Rule::in(array_keys(TramitePublico::ESTADOS))], 'mensaje' => ['required', 'string', 'max:2000'], 'version' => ['required', 'integer']]);
+        $datos = $request->validate([
+            'estado' => ['required', Rule::in(array_keys(TramitePublico::ESTADOS))],
+            // Only an observation or rejection needs a reason written by the staff member.
+            'mensaje' => ['nullable', 'required_if:estado,OBSERVADA,RECHAZADA', 'string', 'max:2000'],
+            'version' => ['required', 'integer'],
+        ], ['mensaje.required_if' => 'Escribe el motivo para que el ciudadano sepa qué hacer.']);
+        $datos['mensaje'] = trim((string) ($datos['mensaje'] ?? '')) ?: (self::MENSAJES[$datos['estado']] ?? 'Tu solicitud fue actualizada.');
         DB::transaction(function () use ($tramite, $datos, $request, $auditoria) {
             $actual = TramitePublico::lockForUpdate()->findOrFail($tramite->id);
             if ($actual->version !== (int) $datos['version']) throw ValidationException::withMessages(['version' => 'La solicitud cambió. Recarga antes de decidir.']);
