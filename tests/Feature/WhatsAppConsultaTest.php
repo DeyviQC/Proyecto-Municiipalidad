@@ -32,22 +32,26 @@ class WhatsAppConsultaTest extends TestCase
     public function test_despues_del_pago_ofrece_chat_solo_con_numero_de_solicitud_y_sin_enviar_nada(): void
     {
         $t = $this->tramite('PAGADO');
-        $response = $this->withSession($this->sesion($t))->get(route('portal.estado'))->assertOk()->assertSee('Notificar por WhatsApp');
-        $dom = new \DOMDocument;
-        @$dom->loadHTML($response->getContent());
-        $link = (new \DOMXPath($dom))->query('//a[starts-with(@href,"https://wa.me/")]')->item(0);
-        $this->assertNotNull($link);
-        $url = $link->getAttribute('href');
+        $this->withSession($this->sesion($t))->get(route('portal.estado'))->assertOk()
+            ->assertSee('Escribir a Registro Civil')->assertSee('Recomendado');
+
+        // The citizen starts the chat: the button records the choice and opens WhatsApp.
+        $url = $this->post(route('portal.whatsapp'))->assertRedirect()->headers->get('Location');
         $this->assertSame('/15555550100', parse_url($url, PHP_URL_PATH));
         parse_str(parse_url($url, PHP_URL_QUERY), $query);
-        $this->assertSame('Hola, deseo recibir por WhatsApp el documento de mi solicitud N.º '.str_pad((string) $t->id, 6, '0', STR_PAD_LEFT).' de Registro Civil. Ya realicé el pago.', $query['text']);
+        $this->assertSame('Hola, soy el solicitante de la solicitud N.º '.str_pad((string) $t->id, 6, '0', STR_PAD_LEFT).' de Registro Civil. Ya realicé el pago y quiero recibir los avisos y mi documento por este WhatsApp.', $query['text']);
         foreach ([$t->codigo, '77777777', $t->email, 'Titular privado', 'Solicitante privado', '/tramite/documento'] as $dato) $this->assertStringNotContainsString($dato, urldecode($url));
-        $this->assertSame('noopener noreferrer', $link->getAttribute('rel'));
-        $this->assertSame('no-referrer', $link->getAttribute('referrerpolicy'));
+        $canales = $t->fresh()->datos['canales_entrega'];
+        $this->assertTrue($canales['whatsapp']);
+        $this->assertNotEmpty($canales['whatsapp_iniciado_at']);
         $this->assertSame('PENDIENTE', $t->fresh()->estado);
-        $this->assertSame(1, $t->fresh()->version);
         $this->assertSame(0, $t->eventos()->count());
         Http::assertNothingSent();
+
+        // Saving the e-mail preference afterwards keeps the WhatsApp choice.
+        $this->post(route('portal.canales'), ['correo' => 1])->assertRedirect(route('portal.estado'));
+        $this->assertTrue($t->fresh()->datos['canales_entrega']['whatsapp']);
+        $this->assertTrue($t->fresh()->datos['canales_entrega']['correo']);
     }
 
     public function test_no_ofrece_whatsapp_antes_de_confirmar_el_pago_ni_abre_el_seguimiento_sin_verificar(): void

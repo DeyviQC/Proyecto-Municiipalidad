@@ -15,15 +15,41 @@ class CanalEntregaController extends Controller
         $acceso = $request->session()->get('portal_acceso');
         abort_unless($acceso && ($acceso['expira'] ?? 0) > now()->timestamp, 403);
         $input = $request->validate(['correo' => 'sometimes|boolean', 'whatsapp' => 'sometimes|boolean',
-            'numero' => ['nullable', 'required_if:whatsapp,1', 'regex:/^[1-9][0-9]{7,14}$/D']]);
+            'numero' => ['nullable', 'regex:/^[1-9][0-9]{7,14}$/D']]);
         DB::transaction(function () use ($acceso, $input) {
             $t = TramitePublico::where('codigo', $acceso['codigo'])->lockForUpdate()->firstOrFail();
             abort_unless($t->email_verificado_at && $t->pago?->estado === 'PAGADO', 403);
-            $preferencias = ['correo' => (bool) ($input['correo'] ?? false), 'whatsapp' => (bool) ($input['whatsapp'] ?? false),
-                'numero' => !empty($input['whatsapp']) ? $input['numero'] : null, 'fecha' => now()->toIso8601String()];
+            $previas = $t->datos['canales_entrega'] ?? [];
+            // The e-mail form does not carry the WhatsApp choice: keep it unless sent explicitly.
+            $whatsapp = array_key_exists('whatsapp', $input) ? (bool) $input['whatsapp'] : (bool) ($previas['whatsapp'] ?? false);
+            $preferencias = array_merge($previas, ['correo' => (bool) ($input['correo'] ?? false), 'whatsapp' => $whatsapp,
+                'numero' => $whatsapp ? ($input['numero'] ?? $previas['numero'] ?? null) : null, 'fecha' => now()->toIso8601String()]);
             $t->update(['datos' => array_merge($t->datos, ['canales_entrega' => $preferencias]), 'version' => $t->version + 1]);
         });
         return redirect()->route('portal.estado')->with('exito', 'Preferencias de entrega guardadas.');
+    }
+
+    /**
+     * The citizen chooses WhatsApp and starts the chat themselves: we record the
+     * choice and open WhatsApp with a ready message to the municipal number.
+     * The institution never writes first; it only replies in that conversation.
+     */
+    public function whatsapp(Request $request, \App\Services\WhatsAppConsulta $consulta)
+    {
+        $acceso = $request->session()->get('portal_acceso');
+        abort_unless($acceso && ($acceso['expira'] ?? 0) > now()->timestamp, 403);
+        $enlace = DB::transaction(function () use ($acceso, $consulta) {
+            $t = TramitePublico::where('codigo', $acceso['codigo'])->lockForUpdate()->firstOrFail();
+            abort_unless($t->email_verificado_at && $t->pago?->estado === 'PAGADO', 403);
+            $enlace = $consulta->enlace($t);
+            abort_unless($enlace, 404);
+            $previas = $t->datos['canales_entrega'] ?? [];
+            $preferencias = array_merge($previas, ['correo' => (bool) ($previas['correo'] ?? false), 'whatsapp' => true,
+                'whatsapp_iniciado_at' => $previas['whatsapp_iniciado_at'] ?? now()->toIso8601String(), 'fecha' => now()->toIso8601String()]);
+            $t->update(['datos' => array_merge($t->datos, ['canales_entrega' => $preferencias]), 'version' => $t->version + 1]);
+            return $enlace;
+        });
+        return redirect()->away($enlace)->header('Referrer-Policy', 'no-referrer');
     }
 
     public function correo(Request $request, TramitePublico $tramite, AuditoriaService $audit)

@@ -15,15 +15,26 @@
 @endif
 <p class="review-muted small mb-0">Se envía el PDF firmado como adjunto al correo verificado, incluido Gmail.</p></div>
 @endif
-@if(!empty($canales['whatsapp']) && preg_match('/^[1-9][0-9]{7,14}$/D', $canales['numero'] ?? ''))
+@if(!empty($canales['whatsapp']))
+@php($numeroValido = preg_match('/^[1-9][0-9]{7,14}$/D', $canales['numero'] ?? ''))
 <div class="p-3 mb-3 border rounded-3"><h4 class="h6"><i class="bi bi-whatsapp me-2" aria-hidden="true"></i>WhatsApp</h4>
-<p class="review-muted mb-2">+{{ $canales['numero'] }}</p>
+<p class="review-muted small mb-2">
+  @if(!empty($canales['whatsapp_iniciado_at']))
+    El ciudadano eligió WhatsApp el {{ \Illuminate\Support\Carbon::parse($canales['whatsapp_iniciado_at'])->format('d/m/Y H:i') }} y escribe desde su celular mencionando la <strong>solicitud N.º {{ str_pad((string) $tramite->id, 6, '0', STR_PAD_LEFT) }}</strong>.
+  @else
+    El ciudadano pidió recibir su documento por WhatsApp.
+  @endif
+  Responde en esa conversación: la municipalidad no inicia chats.
+</p>
+@if($numeroValido)<p class="review-muted mb-2">+{{ $canales['numero'] }}</p>@endif
 @if($puedeEnviar)
-<a href="https://wa.me/{{ $canales['numero'] }}?text={{ rawurlencode('Hola, tu documento de la solicitud N.º '.str_pad((string) $tramite->id, 6, '0', STR_PAD_LEFT).' de Registro Civil está listo.') }}" class="btn btn-outline-success w-100 mb-2" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"><i class="bi bi-whatsapp me-2" aria-hidden="true"></i>Abrir WhatsApp del solicitante</a>
+@if($numeroValido)
+<a href="https://wa.me/{{ $canales['numero'] }}" class="btn btn-outline-success w-100 mb-2" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"><i class="bi bi-whatsapp me-2" aria-hidden="true"></i>Abrir la conversación del solicitante</a>
+@endif
 <a href="{{ route('entrega.archivo', [$tramite, 'firmado']).'?descargar=1' }}" class="review-secondary-link">Descargar PDF firmado para adjuntar</a>
-<p class="review-muted small">Si ya tienes el PDF, usa esa copia. Adjunta el documento en la conversación y pulsa enviar. Abrir el chat no confirma la entrega.</p>
+<p class="review-muted small">Busca el chat por el número de solicitud, adjunta el PDF firmado y pulsa enviar. Abrir el chat no confirma la entrega.</p>
 @else
-<button class="btn btn-outline-secondary w-100" disabled>Abrir WhatsApp al publicar</button>
+<p class="review-muted small mb-0">Cuando publiques el PDF firmado podrás descargarlo aquí para enviarlo en ese chat. Mientras tanto, responde sus consultas con el estado del trámite.</p>
 @endif
 </div>
 @endif
