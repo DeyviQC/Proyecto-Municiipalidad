@@ -44,30 +44,32 @@ class YapeOrdersTest extends TestCase
     public function test_confirma_solo_orden_verificada_y_no_envia_datos_del_ciudadano(): void {
         $p = $this->setupPago(); $this->fake($p);
         $this->get(route('yape.formulario'))->assertOk()->assertSee('123456');
-        $this->post(route('yape.pagar'), ['celular' => '111111111'])->assertRedirect(route('portal.estado'));
+        $this->post(route('yape.pagar'), ['celular' => '111111111', 'otp' => '123456'])->assertRedirect(route('portal.estado'));
         $this->assertSame('PAGADO', $p->fresh()->estado);
         $this->assertSame('PENDIENTE', $p->tramite->fresh()->estado);
         $this->assertSame(1, $p->tramite->eventos()->count());
         Http::assertSent(fn($r) => $r->url() === 'https://api.mercadopago.com/v1/orders'
             && $r['payer']['email'] === 'test_payer@example.com' && $r['total_amount'] === '10.30'
             && $r['processing_mode'] === 'automatic' && $r->hasHeader('X-Idempotency-Key'));
-        $this->post(route('yape.pagar'), ['celular' => '111111111'])->assertStatus(409);
+        $this->post(route('yape.pagar'), ['celular' => '111111111', 'otp' => '123456'])->assertStatus(409);
         Http::assertSentCount(4);
     }
 
     public function test_no_permite_celular_real_ni_sesion_ajena_ni_otro_checkout(): void {
         $p = $this->setupPago();
-        $this->post(route('yape.pagar'), ['celular' => '999223660'])->assertSessionHasErrors('celular');
+        $this->post(route('yape.pagar'), ['celular' => '999223660', 'otp' => '123456'])->assertSessionHasErrors('celular');
+        $this->post(route('yape.pagar'), ['celular' => '111111111', 'otp' => '654321'])->assertSessionHasErrors('otp');
+        $this->post(route('yape.pagar'), ['celular' => '111111111'])->assertSessionHasErrors('otp');
         $p->update(['mercadopago_preferencia_id' => '777-pref']);
-        $this->post(route('yape.pagar'), ['celular' => '111111111'])->assertStatus(409);
-        $this->withSession(['portal_acceso' => null])->post(route('yape.pagar'), ['celular' => '111111111'])->assertForbidden();
+        $this->post(route('yape.pagar'), ['celular' => '111111111', 'otp' => '123456'])->assertStatus(409);
+        $this->withSession(['portal_acceso' => null])->post(route('yape.pagar'), ['celular' => '111111111', 'otp' => '123456'])->assertForbidden();
         Http::assertNothingSent();
     }
 
     public function test_orden_con_importe_incorrecto_no_confirma_ni_se_recrea(): void {
         $p = $this->setupPago(); $this->fake($p, ['total_amount' => '0.01']);
-        $this->post(route('yape.pagar'), ['celular' => '111111111'])->assertStatus(422);
-        $this->post(route('yape.pagar'), ['celular' => '111111111'])->assertStatus(422);
+        $this->post(route('yape.pagar'), ['celular' => '111111111', 'otp' => '123456'])->assertStatus(422);
+        $this->post(route('yape.pagar'), ['celular' => '111111111', 'otp' => '123456'])->assertStatus(422);
         $this->assertSame('PENDIENTE', $p->fresh()->estado);
         Http::assertSentCount(6); // second attempt reads only account and existing order.
         $this->post(route('mercadopago.pagar'))->assertStatus(409);
@@ -75,14 +77,14 @@ class YapeOrdersTest extends TestCase
 
     public function test_rechazo_no_aprueba_solicitud(): void {
         $p = $this->setupPago(); $this->fake($p, ['status' => 'failed', 'status_detail' => 'processing_error']);
-        $this->post(route('yape.pagar'), ['celular' => '111111114'])->assertRedirect()->assertSessionHas('exito');
+        $this->post(route('yape.pagar'), ['celular' => '111111114', 'otp' => '123456'])->assertRedirect()->assertSessionHas('exito');
         $this->assertSame('PENDIENTE', $p->fresh()->estado);
         $this->assertSame(0, $p->tramite->eventos()->count());
     }
 
     public function test_cuenta_productiva_no_envia_token_ni_orden(): void {
         $p = $this->setupPago(); $this->fake($p, [], true);
-        $this->post(route('yape.pagar'), ['celular' => '111111111'])->assertRedirect()->assertSessionHas('error');
+        $this->post(route('yape.pagar'), ['celular' => '111111111', 'otp' => '123456'])->assertRedirect()->assertSessionHas('error');
         Http::assertSentCount(1);
         $this->assertNull($p->fresh()->yape_intento);
     }
@@ -91,7 +93,7 @@ class YapeOrdersTest extends TestCase
         $p = $this->setupPago();
         $this->fake($p);
         $p->update(['yape_intento' => (string) Str::uuid()]);
-        $this->post(route('yape.pagar'), ['celular' => '111111111'])->assertRedirect()->assertSessionHas('error');
+        $this->post(route('yape.pagar'), ['celular' => '111111111', 'otp' => '123456'])->assertRedirect()->assertSessionHas('error');
         Http::assertSentCount(1);
         $this->assertSame('PENDIENTE', $p->fresh()->estado);
     }

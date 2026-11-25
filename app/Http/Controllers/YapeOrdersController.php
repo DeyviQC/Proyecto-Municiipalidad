@@ -27,7 +27,15 @@ class YapeOrdersController extends Controller
     public function pagar(Request $request, YapeOrdersService $yape) {
         $t = $this->solicitud($request);
         // Allow only documented dummy values. Do not collect real OTPs or citizen data.
-        $input = $request->validate(['celular' => ['required', 'regex:/^11111111[1-8]$/D']]);
+        $input = $request->validate([
+            'celular' => ['required', 'regex:/^11111111[1-8]$/D'],
+            'otp' => ['required', 'in:123456'],
+        ], [
+            'celular.required' => 'Ingresa tu número de celular.',
+            'celular.regex' => 'En modo de prueba usa el celular 111111111 (pago aprobado). No ingreses tu número real.',
+            'otp.required' => 'Ingresa el código de aprobación.',
+            'otp.in' => 'Código de aprobación incorrecto. En modo de prueba usa 123456.',
+        ]);
         if (!$yape->disponible()) return back()->with('error', 'Falta configurar la Public Key de prueba de Mercado Pago.');
         try {
             $resultado = Cache::store('file')->lock('mp-checkout:'.$t->id, 90)->block(3, function () use ($t, $yape, $input) {
@@ -42,7 +50,7 @@ class YapeOrdersController extends Controller
                         && !$p->mercadopago_checkout_url && $p->estado !== 'PAGADO', 409);
                     return $p;
                 });
-                return $yape->ejecutar($pago, $input['celular']);
+                return $yape->ejecutar($pago, $input['celular'], $input['otp']);
             });
             if ($resultado === 'aprobado') return redirect()->route('portal.estado')->with('pago_confirmado', true);
             return back()->with('exito', $resultado === 'rechazado'

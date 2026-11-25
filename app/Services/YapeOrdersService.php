@@ -17,8 +17,8 @@ class YapeOrdersService
             && preg_match('/^(APP_USR-|TEST-)[A-Za-z0-9_-]+$/D', (string) config('mercadopago.public_key'));
     }
 
-    public function ejecutar(PagoTramite $pago, string $celular): string {
-        abort_unless($this->disponible() && preg_match('/^11111111[1-8]$/D', $celular)
+    public function ejecutar(PagoTramite $pago, string $celular, string $otp = '123456'): string {
+        abort_unless($this->disponible() && preg_match('/^11111111[1-8]$/D', $celular) && $otp === '123456'
             && $pago->importe_centimos === (int) config('portal.tarifa_centimos'), 422);
         $http = $this->http()->withToken(config('mercadopago.access_token'));
         // Verify the seller on every attempt: a prefix alone is not proof of test credentials.
@@ -29,7 +29,7 @@ class YapeOrdersService
         if (!$pago->yape_intento) {
             $token = $this->http()->post('https://api.mercadopago.com/platforms/pci/yape/v1/payment?'.http_build_query([
                 'public_key' => config('mercadopago.public_key'),
-            ]), ['phoneNumber' => $celular, 'otp' => '123456', 'requestId' => (string) Str::uuid()]);
+            ]), ['phoneNumber' => $celular, 'otp' => $otp, 'requestId' => (string) Str::uuid()]);
             throw_unless($token->successful() && is_string($token->json('id'))
                 && preg_match('/^[A-Za-z0-9_-]{1,200}$/D', $token->json('id')), \RuntimeException::class, 'No se pudo generar el token de prueba.');
             // Persist BEFORE sending: a timeout never causes a new order on the next click.
