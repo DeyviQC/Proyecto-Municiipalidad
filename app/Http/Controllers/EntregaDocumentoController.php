@@ -118,7 +118,16 @@ class EntregaDocumentoController extends Controller
             $actual->eventos()->create(['usuario_id' => $request->user()->id, 'estado' => 'LISTA', 'mensaje' => 'Tu documento firmado está disponible para descargar en este seguimiento.']);
             $audit->registrar('PUBLICAR_DOCUMENTO', 'Portal ciudadano', $actual->id, 'Documento disponible en seguimiento protegido.');
         });
-        return back()->with('exito', 'Documento publicado en el seguimiento del ciudadano. No se ha enviado por WhatsApp.');
+        $mensaje = 'Documento publicado. El ciudadano ya puede descargarlo y recibió el aviso.';
+        // If the citizen asked for e-mail delivery, send it now instead of needing another click.
+        try {
+            if (app(\App\Services\EnvioDocumentoCorreo::class)->enviar($tramite->id, 'PDF firmado enviado automáticamente al publicar, a petición del ciudadano.')) {
+                $mensaje .= ' También se envió por correo.';
+            }
+        } catch (\Symfony\Component\Mailer\Exception\TransportExceptionInterface|\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            return back()->with('exito', $mensaje)->with('error', 'No se pudo enviar el correo automáticamente. Usa «Enviar PDF por correo» para reintentar.');
+        }
+        return back()->with('exito', $mensaje);
     }
 
     public function descartar(Request $request, TramitePublico $tramite, AuditoriaService $audit)

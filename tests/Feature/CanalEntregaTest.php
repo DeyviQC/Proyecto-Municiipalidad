@@ -70,4 +70,26 @@ class CanalEntregaTest extends TestCase
         Mail::assertSentCount(1);
         $this->assertNotEmpty($t->fresh()->datos['entrega']['correo_enviado_at']);
     }
+
+    public function test_publicar_envia_el_correo_automaticamente_si_el_ciudadano_lo_pidio(): void
+    {
+        $t = $this->tramite();
+        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->roles()->attach(Role::where('slug', 'asistente')->firstOrFail());
+        Storage::disk('local')->put('private/firmado.pdf', '%PDF-firmado');
+        $t->update(['estado' => 'APROBADA', 'datos' => ['canales_entrega' => ['correo' => true], 'entrega' => [
+            'firmado_ruta' => 'private/firmado.pdf', 'firmado_sha256' => hash('sha256', '%PDF-firmado'),
+            'integridad' => 'VERIFICADA', 'firmante' => 'FUNCIONARIO DE PRUEBA']]]);
+
+        $this->actingAs($staff)->get(route('atencion.show', $t))->assertOk()
+            ->assertSee('Publicar y entregar')->assertSee('FUNCIONARIO DE PRUEBA')->assertSee('se le enviará el PDF por correo');
+        $this->post(route('entrega.publicar', $t), ['version' => $t->fresh()->version, 'revision_firma' => 1,
+            'sustento_firma' => 'Se revisó el contenido y la firma del funcionario.'])->assertSessionHas('exito');
+
+        $this->assertSame('LISTA', $t->fresh()->estado);
+        Mail::assertSent(DocumentoFirmadoMail::class, fn ($mail) => $mail->hasTo('verificado@example.test'));
+        Mail::assertSentCount(1);
+        $this->assertNotEmpty($t->fresh()->datos['entrega']['correo_enviado_at']);
+    }
 }

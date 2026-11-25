@@ -3,10 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\TramitePublico;
-use App\Mail\DocumentoFirmadoMail;
-use App\Services\AuditoriaService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{Cache, DB, Mail, Storage};
+use Illuminate\Support\Facades\DB;
 
 class CanalEntregaController extends Controller
 {
@@ -52,30 +50,13 @@ class CanalEntregaController extends Controller
         return redirect()->away($enlace)->header('Referrer-Policy', 'no-referrer');
     }
 
-    public function correo(Request $request, TramitePublico $tramite, AuditoriaService $audit)
+    public function correo(Request $request, TramitePublico $tramite, \App\Services\EnvioDocumentoCorreo $envio)
     {
+        $t = $tramite->fresh();
+        abort_unless($t->estado === 'LISTA' && $t->pago?->estado === 'PAGADO' && $t->email_verificado_at
+            && !empty($t->datos['canales_entrega']['correo']) && !empty($t->datos['entrega']['revision']), 403);
         try {
-            // The cache lock serialises concurrent clicks, so the SMTP call happens
-            // outside the database transaction without holding a row lock open.
-            Cache::lock('entrega-correo:'.$tramite->id, 120)->block(5, function () use ($tramite, $audit) {
-                $t = TramitePublico::findOrFail($tramite->id);
-                $datos = $t->datos;
-                $entrega = $datos['entrega'] ?? [];
-                abort_unless($t->estado === 'LISTA' && $t->pago?->estado === 'PAGADO' && $t->email_verificado_at
-                    && !empty($datos['canales_entrega']['correo']) && !empty($entrega['revision']), 403);
-                if (!empty($entrega['correo_enviado_at'])) return;
-                $disk = Storage::disk('local');
-                $ruta = $entrega['firmado_ruta'] ?? '';
-                abort_unless($ruta && $disk->exists($ruta) && hash_equals($entrega['firmado_sha256'] ?? '', hash_file('sha256', $disk->path($ruta))), 409);
-                Mail::to($t->email)->send(new DocumentoFirmadoMail($t->id, $ruta));
-                DB::transaction(function () use ($t, $audit) {
-                    $actual = TramitePublico::lockForUpdate()->findOrFail($t->id);
-                    $datos = $actual->datos;
-                    $datos['entrega']['correo_enviado_at'] = now()->toIso8601String();
-                    $actual->update(['datos' => $datos, 'version' => $actual->version + 1]);
-                    $audit->registrar('ENVIAR_DOCUMENTO_CORREO', 'Portal ciudadano', $actual->id, 'PDF firmado enviado al correo verificado a petición del ciudadano.');
-                });
-            });
+            $envio->enviar($t->id, 'PDF firmado enviado al correo verificado a petición del ciudadano.');
         } catch (\Symfony\Component\Mailer\Exception\TransportExceptionInterface $e) {
             return back()->with('error', 'No se pudo confirmar el envío del correo. Revisa la bandeja de salida antes de volver a intentarlo.');
         } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {

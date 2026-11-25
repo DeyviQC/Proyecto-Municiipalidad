@@ -39,5 +39,5 @@
 </div>
 @endif
 @if(empty($canales['correo']) && empty($canales['whatsapp']))<p class="review-muted">El ciudadano aún no ha solicitado entrega por correo o WhatsApp. Puede descargar el documento desde su seguimiento.</p>@endif
-@unless($puedeEnviar)<p class="review-muted small">Revisa y publica el PDF para habilitar los envíos solicitados.</p>@endunless
+@unless($puedeEnviar)<p class="review-muted small">Al publicar, el correo se envía automáticamente y el ciudadano recibe el aviso.</p>@endunless
 </section>
