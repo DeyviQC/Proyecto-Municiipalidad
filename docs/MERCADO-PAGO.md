@@ -32,7 +32,24 @@ No se necesita Public Key para esta modalidad de redirección: el Access Token s
 
 Las órdenes antiguas de Izipay/TAYPI y sus callbacks se conservan para reconciliación. No se cambia su proveedor ni se ofrece otra pasarela mientras su estado esté sin resolver. Las nuevas solicitudes usan Mercado Pago.
 
-Una preferencia guardada se reutiliza; no se crea otra por cada clic. Si la creación termina con un error o timeout antes de guardar la respuesta, queda `CREANDO` y se bloquea la recreación automática: revisar en Mercado Pago usando la referencia antes de permitir otro intento. Tampoco se crean nuevos pagos cuando una preferencia vence; corresponde reconciliar primero. Reembolsos y contracargos posteriores requieren revisión municipal y no están automatizados en esta integración de prueba.
+Una preferencia guardada se reutiliza; no se crea otra por cada clic. Si la creación falla antes de guardar la respuesta, el siguiente clic vuelve a crearla con la **misma** referencia (`external_reference`): una preferencia no es un cobro y cualquier pago se concilia con esa referencia. Reembolsos y contracargos posteriores requieren revisión municipal y no están automatizados en esta integración de prueba.
+
+## Comprobar un pago sin túnel ni webhook
+
+En la página de estado, después de abrir el checkout, aparece **«Ya pagué, comprobar pago»**. El servidor consulta `GET /v1/payments/search?external_reference=…` con el Access Token, descarta resultados de otra referencia o de otro vendedor y confirma cualquier pago aprobado mediante la misma validación completa (`/v1/payments/{id}`: importe, moneda, vendedor, `live_mode=false`, sin reembolsos). Funciona desde `127.0.0.1` sin túnel ni webhook, así que sirve para demostraciones en la laptop.
+
+Si el navegador vuelve de Mercado Pago sin la sesión del portal (por ejemplo, por otro dominio), el retorno igualmente valida el pago con la API y envía al ciudadano al seguimiento para que vuelva a ingresar.
+
+## Cómo hacer un pago de prueba aprobado
+
+1. Abre el checkout en una **ventana de incógnito** e inicia sesión con un **usuario de prueba comprador** (Tus integraciones → Tu aplicación → Cuentas de prueba). Si pide un código por correo, se obtiene en esa misma sección.
+2. Paga con **tarjeta de prueba**, por ejemplo Visa `4009 1753 3280 6176` o Mastercard `5031 7557 3453 0604`, CVV `123`, vencimiento `11/30`, titular **`APRO`** y documento `123456789`.
+3. Otros titulares simulan resultados: `OTHE` rechazado, `CONT` pendiente, `FUND` fondos insuficientes, `SECU` código de seguridad inválido.
+4. Vuelve al portal y pulsa «Ya pagué, comprobar pago».
+
+**Yape dentro de Checkout Pro:** la documentación no publica datos de prueba de Yape para el checkout redirigido, por eso en sandbox suele terminar en «Yape rechazó tu pago». Para demostrar Yape, usa la simulación propia del portal («Probar pago con Yape», más abajo) con el celular `111111111` y OTP `123456`, que sí está documentada. Esa opción solo aparece mientras la solicitud no tenga una preferencia de Checkout Pro creada.
+
+Fuentes: https://www.mercadopago.com.pe/developers/es/docs/checkout-pro/integration-test/test-purchases y https://www.mercadopago.com.pe/developers/es/docs/checkout-api-orders/integration-test/yape
 
 ## Fuentes oficiales
 

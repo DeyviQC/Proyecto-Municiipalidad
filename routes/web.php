@@ -28,6 +28,7 @@ Route::post('/pagos/taypi/notificacion', \App\Http\Controllers\TaypiWebhookContr
 Route::post('/tramite/pagar-mercadopago', [\App\Http\Controllers\MercadoPagoController::class, 'pagar'])->middleware('throttle:portal-pago')->name('mercadopago.pagar');
 Route::get('/tramite/yape', [\App\Http\Controllers\YapeOrdersController::class, 'formulario'])->name('yape.formulario');
 Route::post('/tramite/yape', [\App\Http\Controllers\YapeOrdersController::class, 'pagar'])->middleware('throttle:portal-pago')->name('yape.pagar');
+Route::post('/tramite/mercadopago/comprobar', [\App\Http\Controllers\MercadoPagoController::class, 'comprobar'])->middleware('throttle:10,1')->name('mercadopago.comprobar');
 Route::get('/pagos/mercadopago/retorno', [\App\Http\Controllers\MercadoPagoController::class, 'retorno'])->middleware('throttle:30,1,mp-retorno:')->name('mercadopago.retorno');
 Route::post('/pagos/mercadopago/notificacion', [\App\Http\Controllers\MercadoPagoController::class, 'notificacion'])->middleware('throttle:60,1,mp-webhook:')->name('mercadopago.notificacion');
 Route::post('/pagos/izipay/retorno', [\App\Http\Controllers\IzipayController::class, 'retorno'])->middleware('throttle:60,1')->name('izipay.retorno');

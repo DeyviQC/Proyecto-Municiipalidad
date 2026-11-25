@@ -134,6 +134,45 @@ class MercadoPagoTest extends TestCase
         $this->get(route('mercadopago.retorno').'?payment_id=123')->assertSessionHas('pago_confirmado', true);
     }
 
+    public function test_comprobar_confirma_un_pago_aprobado_sin_webhook_ni_tunel(): void
+    {
+        $t = $this->tramite(); $p = $this->pago($t);
+        $p->update(['mercadopago_preferencia_id' => 'pref-1']);
+        Http::fake([
+            'api.mercadopago.com/v1/payments/search*' => Http::response(['results' => [
+                $this->respuesta($p, ['id' => 122, 'status' => 'rejected']), $this->respuesta($p),
+            ]]),
+            'api.mercadopago.com/v1/payments/123' => Http::response($this->respuesta($p)),
+        ]);
+        $this->acceso($t)->get(route('portal.estado'))->assertSee('Ya pagué, comprobar pago');
+        $this->post(route('mercadopago.comprobar'))->assertRedirect(route('portal.estado'))->assertSessionHas('pago_confirmado', true);
+        $this->assertSame('PAGADO', $p->fresh()->estado);
+        $this->assertSame('PENDIENTE', $t->fresh()->estado);
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'external_reference='.$p->idempotencia));
+    }
+
+    public function test_comprobar_informa_rechazo_y_no_confirma_pagos_de_otra_referencia(): void
+    {
+        $t = $this->tramite(); $p = $this->pago($t);
+        $ajeno = $this->respuesta($p, ['id' => 999, 'external_reference' => 'otra-referencia']);
+        Http::fake(['api.mercadopago.com/v1/payments/search*' => Http::response(['results' => [
+            $this->respuesta($p, ['status' => 'rejected']), $ajeno,
+        ]])]);
+        $this->acceso($t)->from(route('portal.estado'))->post(route('mercadopago.comprobar'))
+            ->assertRedirect(route('portal.estado'))->assertSessionHas('error');
+        $this->assertSame('PENDIENTE', $p->fresh()->estado);
+        Http::assertNotSent(fn ($r) => str_contains($r->url(), '/v1/payments/999'));
+    }
+
+    public function test_retorno_sin_sesion_confirma_con_mercado_pago_y_envia_al_seguimiento(): void
+    {
+        $t = $this->tramite(); $p = $this->pago($t);
+        Http::fake(['api.mercadopago.com/v1/payments/123' => Http::response($this->respuesta($p))]);
+        $this->get(route('mercadopago.retorno').'?payment_id=123')->assertRedirect(route('portal.seguimiento'))
+            ->assertSessionHas('exito');
+        $this->assertSame('PAGADO', $p->fresh()->estado);
+    }
+
     public function test_reintenta_con_la_misma_referencia_y_nunca_redirige_a_url_ajena(): void
     {
         $t = $this->tramite();

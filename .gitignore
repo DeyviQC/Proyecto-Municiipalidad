@@ -31,3 +31,6 @@ yarn-error.log
 /output/
 /docs/propuesta/*.docx
 /docs/propuesta/~$*
+
+# Configuración local del editor/Claude (rutas propias de esta laptop)
+/.claude/

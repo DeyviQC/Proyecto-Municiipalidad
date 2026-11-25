@@ -53,16 +53,47 @@ class MercadoPagoController extends Controller
 
     public function retorno(Request $request, MercadoPagoService $mp)
     {
-        $tramite = $this->solicitud($request);
+        $acceso = $request->session()->get('portal_acceso');
+        $conSesion = is_array($acceso) && ($acceso['expira'] ?? 0) > now()->timestamp;
+        $tramite = $conSesion ? $this->solicitud($request) : null;
         $id = $request->query('payment_id');
+        $confirmado = false;
         if (is_string($id) && preg_match('/^[1-9][0-9]{0,29}$/D', $id)) {
             try {
-                if ($mp->confirmar($id, $tramite->id)) return redirect()->route('portal.estado')->with('pago_confirmado', true);
+                // confirmar() re-reads the payment from Mercado Pago and matches it to its own
+                // reference, so it is safe even when the browser lost the portal session
+                // (e.g. returning through a different host than the one used to start).
+                $confirmado = (bool) $mp->confirmar($id, $tramite?->id);
             } catch (\Throwable $e) {
-                // A browser status parameter is never proof of payment; webhook can reconcile later.
+                // A browser status parameter is never proof of payment; it can be checked later.
             }
         }
-        return redirect()->route('portal.estado')->with('exito', 'Estamos comprobando el resultado de Mercado Pago. Consulta el estado antes de intentar otro pago.');
+        if (! $tramite) {
+            return redirect()->route('portal.seguimiento')->with('exito', $confirmado
+                ? 'Pago confirmado. Ingresa con tu DNI y correo para ver tu solicitud.'
+                : 'Volviste de Mercado Pago. Ingresa con tu DNI y correo para consultar el resultado del pago.');
+        }
+        return $confirmado
+            ? redirect()->route('portal.estado')->with('pago_confirmado', true)
+            : redirect()->route('portal.estado')->with('exito', 'Volviste de Mercado Pago. Si ya pagaste, pulsa «Ya pagué, comprobar pago».');
+    }
+
+    public function comprobar(Request $request, MercadoPagoService $mp)
+    {
+        $tramite = $this->solicitud($request);
+        $pago = $tramite->pago;
+        abort_unless($pago && $pago->proveedor === 'MERCADOPAGO', 409);
+        try {
+            $resultado = $mp->comprobarPorReferencia($pago);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'No se pudo consultar a Mercado Pago en este momento. Revisa tu conexión e inténtalo de nuevo; no realices otro pago.');
+        }
+        return match ($resultado) {
+            'aprobado' => redirect()->route('portal.estado')->with('pago_confirmado', true),
+            'en_proceso' => back()->with('exito', 'Mercado Pago aún está procesando tu pago. Vuelve a comprobar en unos minutos.'),
+            'rechazado' => back()->with('error', 'Mercado Pago rechazó el pago. No se realizó ningún cobro; puedes volver a intentarlo con «Continuar con Mercado Pago».'),
+            default => back()->with('exito', 'Todavía no hay un pago registrado en Mercado Pago para esta solicitud.'),
+        };
     }
 
     public function notificacion(Request $request, MercadoPagoService $mp)

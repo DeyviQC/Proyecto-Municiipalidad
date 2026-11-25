@@ -127,4 +127,30 @@ class MercadoPagoService
             return $tramite->codigo;
         });
     }
+
+    /**
+     * Asks Mercado Pago directly for the payments made against this order's reference.
+     * Works without a public URL, tunnel or webhook (e.g. on a laptop): any approved
+     * payment found is confirmed through confirmar(), which re-validates everything.
+     *
+     * @return string 'aprobado' | 'rechazado' | 'en_proceso' | 'sin_pagos'
+     */
+    public function comprobarPorReferencia(PagoTramite $pago): string
+    {
+        abort_unless($this->disponible() && $pago->proveedor === 'MERCADOPAGO', 422);
+        if ($pago->estado === 'PAGADO') return 'aprobado';
+        $response = $this->http()->get('https://api.mercadopago.com/v1/payments/search', [
+            'external_reference' => $pago->idempotencia, 'sort' => 'date_created', 'criteria' => 'desc', 'limit' => 20,
+        ]);
+        abort_unless($response->successful(), 503);
+        $pagos = collect((array) $response->json('results'))->filter(fn ($p) => is_array($p)
+            && ($p['external_reference'] ?? null) === $pago->idempotencia
+            && (string) ($p['collector_id'] ?? '') === (string) config('mercadopago.collector_id'));
+        foreach ($pagos->where('status', 'approved') as $aprobado) {
+            if ($this->confirmar((string) $aprobado['id'], $pago->tramite_publico_id)) return 'aprobado';
+        }
+        if ($pagos->isEmpty()) return 'sin_pagos';
+        return $pagos->contains(fn ($p) => in_array($p['status'] ?? '', ['pending', 'in_process', 'authorized'], true))
+            ? 'en_proceso' : 'rechazado';
+    }
 }
