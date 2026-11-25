@@ -26,14 +26,15 @@ class YapeOrdersService
         throw_unless($seller->successful() && $seller->json('site_id') === 'MPE'
             && (string) $seller->json('id') === (string) config('mercadopago.collector_id')
             && in_array('test_user', (array) $seller->json('tags'), true), \RuntimeException::class, 'Cuenta de prueba no verificada.');
-        if (!$pago->yape_intento) {
-            $token = $this->http()->post('https://api.mercadopago.com/platforms/pci/yape/v1/payment?'.http_build_query([
+        if (!$pago->yape_order_id) {
+            $token =$this->http()->post('https://api.mercadopago.com/platforms/pci/yape/v1/payment?'.http_build_query([
                 'public_key' => config('mercadopago.public_key'),
             ]), ['phoneNumber' => $celular, 'otp' => $otp, 'requestId' => (string) Str::uuid()]);
             throw_unless($token->successful() && is_string($token->json('id'))
                 && preg_match('/^[A-Za-z0-9_-]{1,200}$/D', $token->json('id')), \RuntimeException::class, 'No se pudo generar el token de prueba.');
-            // Persist BEFORE sending: a timeout never causes a new order on the next click.
-            $pago->update(['yape_intento' => (string) Str::uuid()]);
+            // Persist the idempotency key BEFORE sending: after a timeout the next click
+            // resends the same key, so Mercado Pago returns the same order instead of a new one.
+            if (!$pago->yape_intento) $pago->update(['yape_intento' => (string) Str::uuid()]);
             $amount = number_format($pago->importe_centimos / 100, 2, '.', '');
             $response = $http->withHeaders(['X-Idempotency-Key' => $pago->yape_intento])->post('https://api.mercadopago.com/v1/orders', [
                 'type' => 'online', 'external_reference' => $pago->idempotencia,
@@ -44,8 +45,13 @@ class YapeOrdersService
                 'transactions' => ['payments' => [['amount' => $amount,
                     'payment_method' => ['id' => 'yape', 'type' => 'debit_card', 'token' => $token->json('id')]]]],
             ]);
-            $id = $response->json('id');
-            throw_unless($response->successful() && is_string($id) && preg_match('/^ORD[A-Za-z0-9]{1,100}$/D', $id), \RuntimeException::class, 'Orden pendiente de reconciliar.');
+            // A rejected Yape (e.g. insufficient balance) answers 402 with the failed order in "data".
+            $id = $response->successful() ? $response->json('id') : $response->json('data.id');
+            if (!is_string($id) || !preg_match('/^ORD[A-Za-z0-9]{1,100}$/D', $id)) {
+                // A 4xx with no order means nothing was created: allow a clean new attempt.
+                if ($response->clientError()) $pago->update(['yape_intento' => null]);
+                throw new \RuntimeException('Orden pendiente de reconciliar.');
+            }
             $pago->update(['yape_order_id' => $id]);
         }
         throw_unless($pago->yape_order_id, \RuntimeException::class, 'Intento pendiente de reconciliar.');

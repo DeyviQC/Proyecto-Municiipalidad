@@ -94,12 +94,29 @@ class YapeOrdersTest extends TestCase
         $this->assertNull($p->fresh()->yape_intento);
     }
 
-    public function test_timeout_ambiguo_no_repite_creacion(): void {
+    public function test_tras_un_timeout_reenvia_con_la_misma_clave_de_idempotencia(): void {
         $p = $this->setupPago();
         $this->fake($p);
-        $p->update(['yape_intento' => (string) Str::uuid()]);
-        $this->post(route('yape.pagar'), ['celular' => '111111111', 'otp' => '123456'])->assertRedirect()->assertSessionHas('error');
-        Http::assertSentCount(1);
+        $clave = (string) Str::uuid();
+        $p->update(['yape_intento' => $clave]);
+        $this->post(route('yape.pagar'), ['celular' => '111111111', 'otp' => '123456'])->assertRedirect(route('portal.estado'));
+        Http::assertSent(fn ($r) => $r->url() === 'https://api.mercadopago.com/v1/orders' && $r->header('X-Idempotency-Key')[0] === $clave);
+        $this->assertSame('PAGADO', $p->fresh()->estado);
+    }
+
+    public function test_saldo_insuficiente_402_al_crear_no_traba_la_solicitud(): void {
+        $p = $this->setupPago();
+        $orden = ['id' => 'ORDTST123', 'external_reference' => $p->idempotencia, 'user_id' => '777', 'currency' => 'PEN',
+            'country_code' => 'PER', 'total_amount' => '10.30', 'total_paid_amount' => '0.00', 'status' => 'failed', 'status_detail' => 'failed'];
+        Http::fake([
+            'api.mercadopago.com/users/me' => Http::response(['id' => 777, 'site_id' => 'MPE', 'tags' => ['test_user']]),
+            'api.mercadopago.com/platforms/pci/yape/*' => Http::response(['id' => 'token-fictional']),
+            'api.mercadopago.com/v1/orders' => Http::response(['errors' => [['code' => 'failed']], 'data' => $orden], 402),
+            'api.mercadopago.com/v1/orders/ORDTST123' => Http::response($orden),
+        ]);
+        $this->post(route('yape.pagar'), ['celular' => '111111113', 'otp' => '123456'])->assertSessionHas('error', fn ($m) => str_contains($m, 'saldo insuficiente'));
+        $this->assertNull($p->fresh()->yape_intento);
+        $this->assertNull($p->fresh()->yape_order_id);
         $this->assertSame('PENDIENTE', $p->fresh()->estado);
     }
 }

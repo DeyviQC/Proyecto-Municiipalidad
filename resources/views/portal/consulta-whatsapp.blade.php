@@ -11,8 +11,8 @@
     <span class="badge rounded-pill" style="background:#128c7e">Recomendado</span>
   </div>
   <p class="small mb-3">Escríbenos y te enviaremos los <strong>avisos</strong> de tu trámite y tu <strong>acta firmada</strong> en ese mismo chat.</p>
-  <form method="POST" action="{{ route('portal.whatsapp') }}" target="_blank" rel="noopener">@csrf
-    <button class="btn btn-lg w-100 text-white fw-semibold" style="background:#25d366;border-color:#25d366"><i class="bi bi-whatsapp me-2" aria-hidden="true"></i>Escribir a Registro Civil<span class="visually-hidden"> (abre WhatsApp en una ventana nueva)</span></button>
+  <form method="POST" action="{{ route('portal.whatsapp') }}">@csrf
+    <button class="btn btn-lg w-100 text-white fw-semibold" style="background:#25d366;border-color:#25d366"><i class="bi bi-whatsapp me-2" aria-hidden="true"></i>Escribir a Registro Civil<span class="visually-hidden"> (abre WhatsApp)</span></button>
   </form>
   <p class="small text-muted mt-2 mb-0">
     @if(!empty($canales['whatsapp_iniciado_at']))

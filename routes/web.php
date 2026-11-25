@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('tramite')->name('portal.')->group(function () {
     Route::post('/canales-entrega', [\App\Http\Controllers\CanalEntregaController::class, 'guardar'])->name('canales');
     Route::post('/whatsapp', [\App\Http\Controllers\CanalEntregaController::class, 'whatsapp'])->middleware('throttle:10,1')->name('whatsapp');
+    // Reloading or reopening the WhatsApp step must not end in a 405 page.
+    Route::get('/whatsapp', fn () => redirect()->route('portal.estado'));
     Route::get('/', [\App\Http\Controllers\PortalPublicoController::class, 'inicio'])->name('inicio');
     Route::post('/buscar', [\App\Http\Controllers\PortalPublicoController::class, 'buscar'])->middleware('throttle:5,1')->name('buscar');
     Route::get('/datos', [\App\Http\Controllers\PortalPublicoController::class, 'datos'])->name('datos');
