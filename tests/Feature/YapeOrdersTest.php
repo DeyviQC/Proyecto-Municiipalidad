@@ -75,11 +75,16 @@ class YapeOrdersTest extends TestCase
         $this->post(route('mercadopago.pagar'))->assertStatus(409);
     }
 
-    public function test_rechazo_no_aprueba_solicitud(): void {
-        $p = $this->setupPago(); $this->fake($p, ['status' => 'failed', 'status_detail' => 'processing_error']);
-        $this->post(route('yape.pagar'), ['celular' => '111111114', 'otp' => '123456'])->assertRedirect()->assertSessionHas('exito');
+    public function test_rechazo_no_aprueba_y_permite_reintentar_con_yape_o_tarjeta(): void {
+        $p = $this->setupPago(); $this->fake($p, ['status' => 'failed', 'status_detail' => 'insufficient_amount']);
+        $this->post(route('yape.pagar'), ['celular' => '111111113', 'otp' => '123456'])->assertRedirect()->assertSessionHas('error');
         $this->assertSame('PENDIENTE', $p->fresh()->estado);
         $this->assertSame(0, $p->tramite->eventos()->count());
+        // The rejected attempt no longer blocks the request.
+        $this->assertNull($p->fresh()->yape_intento);
+        $this->get(route('portal.estado'))->assertOk()->assertSee('Pagar con Yape')->assertDontSee('en proceso');
+        $this->post(route('yape.pagar'), ['celular' => '111111113', 'otp' => '123456'])->assertSessionHas('error');
+        Http::assertSentCount(8); // two full attempts: account, token, order, read.
     }
 
     public function test_cuenta_productiva_no_envia_token_ni_orden(): void {

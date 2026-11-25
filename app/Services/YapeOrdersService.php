@@ -58,7 +58,12 @@ class YapeOrdersService
             && (string) ($data['user_id'] ?? '') === (string) config('mercadopago.collector_id')
             && ($data['currency'] ?? '') === 'PEN' && ($data['country_code'] ?? '') === 'PER'
             && $this->centimos($data['total_amount'] ?? null) === $pago->importe_centimos, 422);
-        if (($data['status'] ?? '') === 'failed') return 'rechazado';
+        if (($data['status'] ?? '') === 'failed') {
+            // A rejected Yape (e.g. insufficient balance) must not lock the request:
+            // forget this attempt so the citizen can try again or pay by card.
+            $pago->update(['yape_intento' => null, 'yape_order_id' => null]);
+            return 'rechazado';
+        }
         if (($data['status'] ?? '') !== 'processed' || ($data['status_detail'] ?? '') !== 'accredited') return 'pendiente';
         $payments = $data['transactions']['payments'] ?? [];
         abort_unless(count($payments) === 1
@@ -74,7 +79,7 @@ class YapeOrdersService
             abort_unless($tramite->estado === 'PENDIENTE_PAGO', 409);
             $actual->update(['estado' => 'PAGADO', 'pagado_at' => now()]);
             $tramite->update(['estado' => 'PENDIENTE', 'version' => $tramite->version + 1]);
-            $tramite->eventos()->create(['estado' => 'PENDIENTE', 'mensaje' => 'Simulación Yape confirmada por Mercado Pago Orders. Sin cobro real. Pendiente de revisión municipal.']);
+            $tramite->eventos()->create(['estado' => 'PENDIENTE', 'mensaje' => 'Pago con Yape confirmado. Tu solicitud pasó a revisión del Registro Civil.']);
         });
         return 'aprobado';
     }

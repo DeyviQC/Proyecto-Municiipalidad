@@ -108,6 +108,43 @@ class PortalPublicoController extends Controller
         return response()->view('portal.estado', compact('tramite'))->header('Cache-Control', 'private, no-store');
     }
 
+    /** The citizen answers an observation; the request goes back to the staff inbox. */
+    public function responder(Request $request)
+    {
+        $tramite = $this->autorizado($request);
+        $datos = $request->validate([
+            'respuesta' => ['required', 'string', 'min:10', 'max:1500'],
+            'adjunto' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        ], [
+            'respuesta.required' => 'Escribe tu respuesta a la observación.',
+            'respuesta.min' => 'Tu respuesta debe tener al menos 10 caracteres.',
+            'adjunto.mimes' => 'El documento debe ser PDF, JPG o PNG.',
+            'adjunto.max' => 'El documento no debe superar los 5 MB.',
+        ]);
+        abort_unless($tramite->estado === 'OBSERVADA', 409, 'Esta solicitud no tiene observaciones por responder.');
+        $ruta = $request->file('adjunto')?->store('private/subsanaciones/'.$tramite->id, 'local');
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($tramite, $datos, $ruta, $request) {
+                $actual = TramitePublico::lockForUpdate()->findOrFail($tramite->id);
+                abort_unless($actual->estado === 'OBSERVADA', 409, 'Esta solicitud no tiene observaciones por responder.');
+                $subsanaciones = $actual->datos['subsanaciones'] ?? [];
+                $subsanaciones[] = ['texto' => $datos['respuesta'], 'adjunto' => $ruta,
+                    'nombre_adjunto' => $ruta ? Str::limit($request->file('adjunto')->getClientOriginalName(), 120, '') : null,
+                    'enviado_at' => now()->toIso8601String()];
+                $actual->datos = array_merge($actual->datos, ['subsanaciones' => $subsanaciones]);
+                $actual->update(['estado' => 'PENDIENTE', 'version' => $actual->version + 1]);
+                // The citizen wrote it: no "payment received" email back to them.
+                \App\Models\TramiteEvento::withoutEvents(fn () => $actual->eventos()->create([
+                    'estado' => 'PENDIENTE', 'mensaje' => 'Respondiste la observación: '.$datos['respuesta']]));
+                app(\App\Services\AuditoriaService::class)->registrar('SUBSANAR_TRAMITE', 'Portal ciudadano', $actual->id, $ruta ? 'Respuesta con documento adjunto.' : 'Respuesta sin adjunto.');
+            });
+        } catch (\Throwable $e) {
+            if ($ruta) \Illuminate\Support\Facades\Storage::disk('local')->delete($ruta);
+            throw $e;
+        }
+        return redirect()->route('portal.estado')->with('exito', 'Enviamos tu respuesta. Registro Civil continuará con la revisión y te avisará por correo.');
+    }
+
     public function seguimiento() { return view('portal.seguimiento'); }
 
     public function recuperar(Request $request, CodigoTramiteService $codigos)

@@ -123,7 +123,7 @@ class MercadoPagoService
             abort_unless($tramite->estado === 'PENDIENTE_PAGO', 409);
             $pago->update(['estado' => 'PAGADO', 'mercadopago_pago_id' => $id, 'pagado_at' => now()]);
             $tramite->update(['estado' => 'PENDIENTE', 'version' => $tramite->version + 1]);
-            $tramite->eventos()->create(['estado' => 'PENDIENTE', 'mensaje' => 'Pago de prueba confirmado por Mercado Pago. Solicitud pendiente de revisión municipal. No representa un abono bancario real.']);
+            $tramite->eventos()->create(['estado' => 'PENDIENTE', 'mensaje' => 'Pago confirmado. Tu solicitud pasó a revisión del Registro Civil.']);
             return $tramite->codigo;
         });
     }

@@ -34,6 +34,21 @@ class AtencionPublicaController extends Controller
         $cruceActual = app(\App\Services\CruceParentescoService::class)->comparar($tramite->acta, $tramite->datos);
         return view('portal.revision', compact('tramite', 'cruceActual'));
     }
+    /** Document attached by the citizen when answering an observation. */
+    public function subsanacion(TramitePublico $tramite, int $indice)
+    {
+        $ruta = $tramite->datos['subsanaciones'][$indice]['adjunto'] ?? null;
+        abort_unless(is_string($ruta) && str_starts_with($ruta, 'private/subsanaciones/'.$tramite->id.'/'), 404);
+        $disk = \Illuminate\Support\Facades\Storage::disk('local');
+        abort_unless($disk->exists($ruta), 404);
+        $tipo = $disk->mimeType($ruta);
+        abort_unless(in_array($tipo, ['application/pdf', 'image/jpeg', 'image/png'], true), 404);
+        return $disk->response($ruta, 'sustento-solicitud-'.$tramite->id.'-'.($indice + 1).'.'.pathinfo($ruta, PATHINFO_EXTENSION), [
+            'Content-Type' => $tipo, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox",
+        ]);
+    }
+
     public function atender(Request $request, TramitePublico $tramite, AuditoriaService $auditoria)
     {
         $datos = $request->validate([

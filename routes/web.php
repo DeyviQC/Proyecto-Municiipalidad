@@ -19,6 +19,7 @@ Route::prefix('tramite')->name('portal.')->group(function () {
     Route::post('/codigo', [\App\Http\Controllers\PortalPublicoController::class, 'verificar'])->middleware('throttle:5,1')->name('verificar');
     Route::post('/reenviar', [\App\Http\Controllers\PortalPublicoController::class, 'reenviar'])->middleware('throttle:3,10')->name('reenviar');
     Route::get('/estado', [\App\Http\Controllers\PortalPublicoController::class, 'estado'])->name('estado');
+    Route::post('/responder', [\App\Http\Controllers\PortalPublicoController::class, 'responder'])->middleware('throttle:5,1')->name('responder');
     Route::get('/documento', [\App\Http\Controllers\PortalPublicoController::class, 'documento'])->middleware('throttle:20,1')->name('documento');
     Route::get('/mis-solicitudes', [\App\Http\Controllers\PortalPublicoController::class, 'solicitudes'])->name('solicitudes');
     Route::post('/seleccionar', [\App\Http\Controllers\PortalPublicoController::class, 'seleccionar'])->name('seleccionar');
@@ -90,6 +91,7 @@ Route::middleware(['auth', 'role:administrador,asistente'])->group(function () {
     Route::get('/atencion-ciudadana', [\App\Http\Controllers\AtencionPublicaController::class, 'index'])->name('atencion.index');
     Route::get('/atencion-ciudadana/{tramite}', [\App\Http\Controllers\AtencionPublicaController::class, 'show'])->name('atencion.show');
     Route::patch('/atencion-ciudadana/{tramite}', [\App\Http\Controllers\AtencionPublicaController::class, 'atender'])->name('atencion.atender');
+    Route::get('/atencion-ciudadana/{tramite}/subsanacion/{indice}', [\App\Http\Controllers\AtencionPublicaController::class, 'subsanacion'])->whereNumber('indice')->name('atencion.subsanacion');
     Route::post('/atencion-ciudadana/{tramite}/firma/preparar', [\App\Http\Controllers\EntregaDocumentoController::class, 'preparar'])->name('entrega.preparar');
     Route::get('/atencion-ciudadana/{tramite}/firma/{tipo}', [\App\Http\Controllers\EntregaDocumentoController::class, 'archivo'])->name('entrega.archivo');
     Route::post('/atencion-ciudadana/{tramite}/firma/cargar', [\App\Http\Controllers\EntregaDocumentoController::class, 'cargar'])->middleware('throttle:10,1')->name('entrega.cargar');

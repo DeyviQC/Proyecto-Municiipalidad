@@ -13,7 +13,6 @@
 <div class="alert alert-warning">Esta solicitud ya tiene un pago iniciado con tarjeta. Termínalo desde tu solicitud.</div>
 @else
 @unless($disponible)<div class="alert alert-warning">El pago con Yape aún no está configurado.</div>@endunless
-@if($errors->any())<div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>@endif
 <form method="POST" action="{{ route('yape.pagar') }}" autocomplete="off" novalidate>@csrf
   <label for="celular" class="form-label fw-semibold">Número de celular</label>
   <div class="input-group input-group-lg mb-3">

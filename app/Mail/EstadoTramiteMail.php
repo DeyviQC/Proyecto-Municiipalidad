@@ -47,7 +47,7 @@ class EstadoTramiteMail extends Mailable implements ShouldQueue
     /** Estados que se notifican y qué debe hacer el ciudadano en cada uno. */
     public const INDICACIONES = [
         'PENDIENTE' => 'Recibimos tu pago. El personal de Registro Civil revisará tu solicitud.',
-        'OBSERVADA' => 'Tu solicitud tiene una observación. Revisa el mensaje y comunícate con Registro Civil para subsanarla.',
+        'OBSERVADA' => 'Tu solicitud tiene una observación. Ingresa a tu seguimiento con tu DNI y correo y responde desde allí; puedes adjuntar un documento.',
         'APROBADA' => 'Tu solicitud fue aprobada. Te avisaremos cuando el documento firmado esté disponible.',
         'LISTA' => 'Tu documento firmado ya está disponible. Ingresa al seguimiento con tu DNI y correo para descargarlo.',
         'RECHAZADA' => 'Tu solicitud fue rechazada. Revisa el motivo y comunícate con Registro Civil si tienes dudas.',

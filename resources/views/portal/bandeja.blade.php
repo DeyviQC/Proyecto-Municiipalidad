@@ -12,6 +12,7 @@ $colores = ['PENDIENTE'=>'amber','EN_REVISION'=>'blue','OBSERVADA'=>'amber','APR
 <header class="desk-inbox-heading"><div><p>REGISTRO CIVIL · MESA DE ATENCIÓN</p><h1>Solicitudes ciudadanas</h1><span>Revisa cada solicitud y continúa con su atención.</span></div><span class="desk-paid"><i class="bi bi-check-circle"></i> Solo pagos confirmados</span></header>
 <nav class="desk-summary" aria-label="Resumen de solicitudes">
 <a href="{{ route('atencion.index', ['estado'=>'PENDIENTE']) }}"><span>Por atender</span><strong>{{ $resumen['PENDIENTE'] ?? 0 }}</strong></a>
+<a href="{{ route('atencion.index', ['estado'=>'EN_REVISION']) }}"><span>En revisión</span><strong>{{ $resumen['EN_REVISION'] ?? 0 }}</strong></a>
 <a href="{{ route('atencion.index', ['estado'=>'APROBADA']) }}"><span>Pendientes de firma</span><strong>{{ $resumen['APROBADA'] ?? 0 }}</strong></a>
 <a href="{{ route('atencion.index') }}"><span>Total de solicitudes</span><strong>{{ $resumen->sum() }}</strong></a>
 </nav>
@@ -28,7 +29,7 @@ $colores = ['PENDIENTE'=>'amber','EN_REVISION'=>'blue','OBSERVADA'=>'amber','APR
 @php($datos = $tramite->datos)
 <tr><td data-label="Solicitud"><strong class="desk-number">N.º {{ str_pad((string)$tramite->id, 6, '0', STR_PAD_LEFT) }}</strong><span class="desk-sub">{{ $tramite->created_at->format('d/m/Y · H:i') }}</span></td>
 <td data-label="Solicitante"><strong class="desk-person">{{ $datos['nombre'] ?? 'No informado' }}</strong><span class="desk-sub">{{ ucfirst(strtolower($datos['busqueda']['tipo'] ?? 'Acta')) }}</span></td>
-<td data-label="Estado"><span class="desk-state desk-state-{{ $colores[$tramite->estado] ?? 'gray' }}"><span aria-hidden="true"></span>{{ $etiquetas[$tramite->estado] ?? App\Models\TramitePublico::ESTADOS[$tramite->estado] }}</span></td>
+<td data-label="Estado"><span class="desk-state desk-state-{{ $colores[$tramite->estado] ?? 'gray' }}"><span aria-hidden="true"></span>{{ $etiquetas[$tramite->estado] ?? App\Models\TramitePublico::ESTADOS[$tramite->estado] }}</span>@if($tramite->estado === 'PENDIENTE' && !empty($datos['subsanaciones']))<span class="desk-sub"><i class="bi bi-reply" aria-hidden="true"></i> Respondió la observación</span>@endif</td>
 <td class="desk-action"><a class="btn btn-outline-primary" href="{{ route('atencion.show', $tramite) }}" aria-label="{{ in_array($tramite->estado, ['LISTA','RECHAZADA']) ? 'Ver' : 'Atender' }} solicitud {{ $tramite->id }}">{{ in_array($tramite->estado, ['LISTA','RECHAZADA']) ? 'Ver detalle' : 'Atender' }}<i class="bi bi-arrow-right ms-2" aria-hidden="true"></i></a></td></tr>
 @empty
 <tr><td colspan="4"><div class="desk-empty"><i class="bi bi-inbox" aria-hidden="true"></i><h2>No hay solicitudes para mostrar</h2><p>{{ !empty($filtros['estado']) || !empty($filtros['solicitud']) ? 'Prueba con otro número o cambia el estado seleccionado.' : 'Las solicitudes aparecerán aquí cuando se confirme su pago.' }}</p></div></td></tr>

@@ -53,12 +53,12 @@ class YapeOrdersController extends Controller
                 return $yape->ejecutar($pago, $input['celular'], $input['otp']);
             });
             if ($resultado === 'aprobado') return redirect()->route('portal.estado')->with('pago_confirmado', true);
-            return back()->with('exito', $resultado === 'rechazado'
-                ? 'Yape devolvió el rechazo simulado. No se confirmó el pago. Usa otra solicitud de prueba para otro escenario.'
+            return back()->with($resultado === 'rechazado' ? 'error' : 'exito', $resultado === 'rechazado'
+                ? 'Yape rechazó el pago (por ejemplo, saldo insuficiente). No se te cobró nada. Puedes intentarlo de nuevo o pagar con tarjeta.'
                 : 'La orden sigue pendiente. Pulsa comprobar para consultar la misma orden, sin crear otro pago.');
         } catch (\Illuminate\Contracts\Cache\LockTimeoutException|\Illuminate\Http\Client\ConnectionException|\RuntimeException $e) {
             if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) throw $e;
-            return back()->with('error', 'No se pudo confirmar la simulación. Si se envió la orden, se conserva el intento para evitar duplicados.');
+            return back()->with('error', 'No pudimos confirmar el pago con Yape. Pulsa «Comprobar mi pago» en unos segundos; no se te cobrará dos veces.');
         }
     }
 }
