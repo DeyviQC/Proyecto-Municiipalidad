@@ -9,8 +9,8 @@ use App\Http\Controllers\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('tramite')->name('portal.')->group(function () {
-    Route::post('/canales-entrega', [\App\Http\Controllers\CanalEntregaController::class, 'guardar'])->name('canales');
-    Route::post('/whatsapp', [\App\Http\Controllers\CanalEntregaController::class, 'whatsapp'])->middleware('throttle:10,1')->name('whatsapp');
+    Route::post('/canales-entrega', [\App\Http\Controllers\CanalEntregaController::class, 'guardar'])->middleware('portal.acceso')->name('canales');
+    Route::post('/whatsapp', [\App\Http\Controllers\CanalEntregaController::class, 'whatsapp'])->middleware('portal.acceso')->middleware('throttle:10,1')->name('whatsapp');
     // Reloading or reopening the WhatsApp step must not end in a 405 page.
     Route::get('/whatsapp', fn () => redirect()->route('portal.estado'));
     Route::get('/', [\App\Http\Controllers\PortalPublicoController::class, 'inicio'])->name('inicio');
@@ -20,18 +20,20 @@ Route::prefix('tramite')->name('portal.')->group(function () {
     Route::get('/codigo', [\App\Http\Controllers\PortalPublicoController::class, 'codigo'])->name('codigo');
     Route::post('/codigo', [\App\Http\Controllers\PortalPublicoController::class, 'verificar'])->middleware('throttle:5,1')->name('verificar');
     Route::post('/reenviar', [\App\Http\Controllers\PortalPublicoController::class, 'reenviar'])->middleware('throttle:3,10')->name('reenviar');
-    Route::get('/estado', [\App\Http\Controllers\PortalPublicoController::class, 'estado'])->name('estado');
-    Route::post('/responder', [\App\Http\Controllers\PortalPublicoController::class, 'responder'])->middleware('throttle:5,1')->name('responder');
-    Route::get('/documento', [\App\Http\Controllers\PortalPublicoController::class, 'documento'])->middleware('throttle:20,1')->name('documento');
+    Route::get('/estado', [\App\Http\Controllers\PortalPublicoController::class, 'estado'])->middleware('portal.acceso')->name('estado');
+    Route::post('/responder', [\App\Http\Controllers\PortalPublicoController::class, 'responder'])->middleware('portal.acceso')->middleware('throttle:5,1')->name('responder');
+    Route::get('/documento', [\App\Http\Controllers\PortalPublicoController::class, 'documento'])->middleware('portal.acceso')->middleware('throttle:20,1')->name('documento');
     Route::get('/mis-solicitudes', [\App\Http\Controllers\PortalPublicoController::class, 'solicitudes'])->name('solicitudes');
     Route::post('/seleccionar', [\App\Http\Controllers\PortalPublicoController::class, 'seleccionar'])->name('seleccionar');
     Route::get('/seguimiento', [\App\Http\Controllers\PortalPublicoController::class, 'seguimiento'])->name('seguimiento');
     Route::post('/seguimiento', [\App\Http\Controllers\PortalPublicoController::class, 'recuperar'])->middleware('throttle:3,10')->name('recuperar');
+    // Signed link from the notice e-mails (signature checked in the controller to explain expiry).
+    Route::get('/acceso/{codigo}', [\App\Http\Controllers\PortalPublicoController::class, 'acceso'])->whereUuid('codigo')->middleware('throttle:10,1')->name('acceso');
 });
-Route::post('/tramite/pagar-mercadopago', [\App\Http\Controllers\MercadoPagoController::class, 'pagar'])->middleware('throttle:portal-pago')->name('mercadopago.pagar');
-Route::get('/tramite/yape', [\App\Http\Controllers\YapeOrdersController::class, 'formulario'])->name('yape.formulario');
-Route::post('/tramite/yape', [\App\Http\Controllers\YapeOrdersController::class, 'pagar'])->middleware('throttle:portal-pago')->name('yape.pagar');
-Route::post('/tramite/mercadopago/comprobar', [\App\Http\Controllers\MercadoPagoController::class, 'comprobar'])->middleware('throttle:10,1')->name('mercadopago.comprobar');
+Route::post('/tramite/pagar-mercadopago', [\App\Http\Controllers\MercadoPagoController::class, 'pagar'])->middleware('portal.acceso')->middleware('throttle:portal-pago')->name('mercadopago.pagar');
+Route::get('/tramite/yape', [\App\Http\Controllers\YapeOrdersController::class, 'formulario'])->middleware('portal.acceso')->name('yape.formulario');
+Route::post('/tramite/yape', [\App\Http\Controllers\YapeOrdersController::class, 'pagar'])->middleware('portal.acceso')->middleware('throttle:portal-pago')->name('yape.pagar');
+Route::post('/tramite/mercadopago/comprobar', [\App\Http\Controllers\MercadoPagoController::class, 'comprobar'])->middleware('portal.acceso')->middleware('throttle:10,1')->name('mercadopago.comprobar');
 Route::get('/pagos/mercadopago/retorno', [\App\Http\Controllers\MercadoPagoController::class, 'retorno'])->middleware('throttle:30,1,mp-retorno:')->name('mercadopago.retorno');
 Route::post('/pagos/mercadopago/notificacion', [\App\Http\Controllers\MercadoPagoController::class, 'notificacion'])->middleware('throttle:60,1,mp-webhook:')->name('mercadopago.notificacion');
 Route::prefix('firma-peru/{tramite}/{intento}')->name('firmaperu.')->middleware('throttle:30,1')->group(function () {

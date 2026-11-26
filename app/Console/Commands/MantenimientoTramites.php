@@ -28,9 +28,8 @@ class MantenimientoTramites extends Command
                         if (! $tramite || $tramite->estado !== 'PENDIENTE_PAGO' || $tramite->pago()->exists()) {
                             return;
                         }
-                        $tramite->update(['estado' => 'VENCIDA', 'version' => $tramite->version + 1,
-                            'otp_hash' => null, 'otp_expira_at' => null]);
-                        $tramite->eventos()->create(['estado' => 'VENCIDA', 'mensaje' => 'La solicitud venció porque no se inició el pago. No se realizó ningún cobro.']);
+                        $tramite->fill(['otp_hash' => null, 'otp_expira_at' => null])
+                            ->transicionar('VENCIDA', 'La solicitud venció porque no se inició el pago. No se realizó ningún cobro.');
                         $auditoria->registrar('VENCER_TRAMITE', 'Portal ciudadano', $tramite->id, 'Vencida automáticamente por falta de pago.');
                         $vencidas++;
                     });

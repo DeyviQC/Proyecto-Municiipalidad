@@ -12,6 +12,8 @@ class MercadoPagoController extends Controller
 {
     private function solicitud(Request $request): TramitePublico
     {
+        // Set by the "portal.acceso" middleware; the gateway return URL has no middleware.
+        if ($request->attributes->has('tramite')) return $request->attributes->get('tramite');
         $acceso = $request->session()->get('portal_acceso');
         abort_unless(is_array($acceso) && ($acceso['expira'] ?? 0) > now()->timestamp, 403);
         return TramitePublico::where('codigo', $acceso['codigo'])->whereNotNull('email_verificado_at')->firstOrFail();

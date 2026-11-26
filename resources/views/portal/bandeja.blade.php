@@ -12,7 +12,6 @@ $colores = ['PENDIENTE'=>'amber','EN_REVISION'=>'blue','OBSERVADA'=>'amber','APR
 <header class="desk-inbox-heading"><div><p>REGISTRO CIVIL · MESA DE ATENCIÓN</p><h1>Solicitudes ciudadanas</h1><span>Revisa cada solicitud y continúa con su atención.</span></div><span class="desk-paid"><i class="bi bi-check-circle"></i> Solo pagos confirmados</span></header>
 <nav class="desk-summary" aria-label="Resumen de solicitudes">
 <a href="{{ route('atencion.index', ['estado'=>'PENDIENTE']) }}"><span>Por atender</span><strong>{{ $resumen['PENDIENTE'] ?? 0 }}</strong></a>
-<a href="{{ route('atencion.index', ['estado'=>'EN_REVISION']) }}"><span>En revisión</span><strong>{{ $resumen['EN_REVISION'] ?? 0 }}</strong></a>
 <a href="{{ route('atencion.index', ['estado'=>'APROBADA']) }}"><span>Pendientes de firma</span><strong>{{ $resumen['APROBADA'] ?? 0 }}</strong></a>
 <a href="{{ route('atencion.index') }}"><span>Total de solicitudes</span><strong>{{ $resumen->sum() }}</strong></a>
 </nav>

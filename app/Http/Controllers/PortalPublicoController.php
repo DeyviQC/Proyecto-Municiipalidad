@@ -132,10 +132,8 @@ class PortalPublicoController extends Controller
                     'nombre_adjunto' => $ruta ? Str::limit($request->file('adjunto')->getClientOriginalName(), 120, '') : null,
                     'enviado_at' => now()->toIso8601String()];
                 $actual->datos = array_merge($actual->datos, ['subsanaciones' => $subsanaciones]);
-                $actual->update(['estado' => 'PENDIENTE', 'version' => $actual->version + 1]);
                 // The citizen wrote it: no "payment received" email back to them.
-                \App\Models\TramiteEvento::withoutEvents(fn () => $actual->eventos()->create([
-                    'estado' => 'PENDIENTE', 'mensaje' => 'Respondiste la observación: '.$datos['respuesta']]));
+                $actual->transicionar('PENDIENTE', 'Respondiste la observación: '.$datos['respuesta'], notificar: false);
                 app(\App\Services\AuditoriaService::class)->registrar('SUBSANAR_TRAMITE', 'Portal ciudadano', $actual->id, $ruta ? 'Respuesta con documento adjunto.' : 'Respuesta sin adjunto.');
             });
         } catch (\Throwable $e) {
@@ -143,6 +141,18 @@ class PortalPublicoController extends Controller
             throw $e;
         }
         return redirect()->route('portal.estado')->with('exito', 'Enviamos tu respuesta. Registro Civil continuará con la revisión y te avisará por correo.');
+    }
+
+    /** Signed link from a notice e-mail: opens the request without a new code. */
+    public function acceso(Request $request, string $codigo)
+    {
+        $tramite = $request->hasValidSignature(false) ?TramitePublico::where('codigo', $codigo)->whereNotNull('email_verificado_at')->first() : null;
+        if (! $tramite) return redirect()->route('portal.seguimiento')->with('aviso', 'El enlace venció o no es válido. Ingresa con tu DNI y correo para recibir un código.');
+        $request->session()->regenerate();
+        $request->session()->forget(['portal_pendiente', 'portal_consultas']);
+        $request->session()->put('portal_acceso', ['codigo' => $tramite->codigo, 'expira' => now()->addMinutes(30)->timestamp]);
+        app(\App\Services\AuditoriaService::class)->registrar('ACCESO_ENLACE', 'Portal ciudadano', $tramite->id, 'Acceso con enlace firmado del correo.');
+        return redirect()->route('portal.estado');
     }
 
     public function seguimiento() { return view('portal.seguimiento'); }
@@ -198,9 +208,7 @@ class PortalPublicoController extends Controller
 
     private function autorizado(Request $request): TramitePublico
     {
-        $acceso = $request->session()->get('portal_acceso');
-        abort_unless($acceso && $acceso['expira'] > now()->timestamp, 403, 'Verifica nuevamente tu correo desde Seguimiento.');
-        return TramitePublico::where('codigo', $acceso['codigo'])->whereNotNull('email_verificado_at')->firstOrFail();
+        return \App\Http\Middleware\EnsurePortalAccess::tramite($request);
     }
 
     private function busquedaActual(Request $request): array

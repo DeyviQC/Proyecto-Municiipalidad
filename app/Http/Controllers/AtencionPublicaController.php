@@ -76,12 +76,11 @@ class AtencionPublicaController extends Controller
                     'cruce_parentesco' => app(\App\Services\CruceParentescoService::class)->comparar($actual->acta, $actual->datos),
                 ]]);
             }
-            $actual->update(['estado' => $datos['estado'], 'version' => $actual->version + 1]);
-            $actual->eventos()->create(['usuario_id' => $request->user()->id, 'estado' => $datos['estado'], 'mensaje' => $datos['mensaje']]);
+            $actual->transicionar($datos['estado'], $datos['mensaje'], $request->user()->id);
             $auditoria->registrar('REVISAR_TRAMITE', 'Portal ciudadano', $actual->id, 'Estado: '.$datos['estado']);
         });
         return back()->with('exito', $datos['estado'] === 'APROBADA'
             ? 'Solicitud aprobada. Continúe con la firma del documento.'
-            : ($datos['estado'] === 'EN_REVISION' ? 'Revisión iniciada.' : 'Respuesta guardada.'));
+            : 'Respuesta enviada al ciudadano.');
     }
 }

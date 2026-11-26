@@ -48,12 +48,6 @@ $cruces = ['COINCIDE'=>'Los datos de filiación coinciden','NO_COINCIDE'=>'El v�
 @if(in_array($tramite->estado, ['APROBADA', 'LISTA']))
 @include('portal.firma')
 @elseif(count($transiciones))
-@if($transiciones === ['EN_REVISION'])
-<p class="review-muted">{{ $tramite->estado === 'OBSERVADA' ? 'Retoma la revisión de los datos y documentos.' : 'Revisa los datos del solicitante antes de decidir.' }}</p>
-<form method="POST" action="{{ route('atencion.atender', $tramite) }}">@csrf @method('PATCH')
-<input type="hidden" name="version" value="{{ $tramite->version }}"><input type="hidden" name="estado" value="EN_REVISION"><input type="hidden" name="mensaje" value="La municipalidad está revisando tu solicitud.">
-<button class="btn btn-success w-100">{{ $tramite->estado === 'OBSERVADA' ? 'Retomar revisión' : 'Iniciar revisión' }}</button></form>
-@else
 <form method="POST" action="{{ route('atencion.atender', $tramite) }}" data-decision>@csrf @method('PATCH')<input type="hidden" name="version" value="{{ $tramite->version }}">
 @if(in_array('APROBADA', $transiciones, true) && $tramite->requiereRevisionVinculo())<fieldset class="review-vinculo" id="revision-vinculo"><legend>Revisión del vínculo</legend><p class="review-muted">Necesario solo para aprobar.</p><div class="form-check mb-3"><input type="checkbox" name="vinculo_revisado" id="vinculo_revisado" class="form-check-input" value="1" @checked(old('vinculo_revisado'))><label for="vinculo_revisado" class="form-check-label">Revisé el vínculo y corresponde autorizar la entrega.</label></div><label for="sustento_revision" class="form-label">Sustento de la revisión</label><textarea name="sustento_revision" id="sustento_revision" class="form-control" rows="2" maxlength="1500">{{ old('sustento_revision') }}</textarea></fieldset>@endif
 @if(in_array('APROBADA', $transiciones, true))
@@ -62,6 +56,7 @@ $cruces = ['COINCIDE'=>'Los datos de filiación coinciden','NO_COINCIDE'=>'El v�
 @endif
 <details class="mt-3" @if($errors->has('mensaje') || old('mensaje')) open @endif><summary class="fw-semibold">Observar o rechazar</summary>
 <label for="mensaje" class="form-label mt-3">Motivo para el ciudadano</label>
+<div class="d-flex flex-wrap gap-1 mb-2" aria-label="Motivos frecuentes">@foreach(config('portal.plantillas_observacion', []) as $titulo => $texto)<button type="button" class="btn btn-sm btn-outline-secondary" data-plantilla="{{ $texto }}">{{ $titulo }}</button>@endforeach</div>
 <textarea id="mensaje" name="mensaje" class="form-control @error('mensaje') is-invalid @enderror" rows="3" maxlength="2000" placeholder="Ej.: Falta acreditar el vínculo con el titular. Envía una copia de tu DNI.">{{ old('mensaje') }}</textarea>
 @error('mensaje')<div class="invalid-feedback">{{ $message }}</div>@enderror
 <p class="review-muted small mt-1">Se mostrará en su seguimiento y le llegará por correo.</p>
@@ -71,7 +66,6 @@ $cruces = ['COINCIDE'=>'Los datos de filiación coinciden','NO_COINCIDE'=>'El v�
 </div>
 </details>
 </form>
-@endif
 @else<p class="review-muted mb-0">Esta solicitud no tiene acciones pendientes.</p>@endif
 </section></aside></div></div>
 @endsection
@@ -93,6 +87,12 @@ $cruces = ['COINCIDE'=>'Los datos de filiación coinciden','NO_COINCIDE'=>'El v�
         if (boton.hasAttribute('data-confirmar-rechazo') && !confirm('¿Rechazar la solicitud? Esta decisión no se puede deshacer.')) event.preventDefault();
     }));
     motivo.addEventListener('input', () => motivo.classList.remove('is-invalid'));
+    // Frequent reasons: one click writes the text, which can still be edited.
+    form.querySelectorAll('[data-plantilla]').forEach(boton => boton.addEventListener('click', () => {
+        motivo.value = boton.dataset.plantilla;
+        motivo.classList.remove('is-invalid');
+        motivo.focus();
+    }));
 })();
 </script>
 @endpush

@@ -10,12 +10,11 @@ class CanalEntregaController extends Controller
 {
     public function guardar(Request $request)
     {
-        $acceso = $request->session()->get('portal_acceso');
-        abort_unless($acceso && ($acceso['expira'] ?? 0) > now()->timestamp, 403);
+        $id = \App\Http\Middleware\EnsurePortalAccess::tramite($request)->id;
         $input = $request->validate(['correo' => 'sometimes|boolean', 'whatsapp' => 'sometimes|boolean',
             'numero' => ['nullable', 'regex:/^[1-9][0-9]{7,14}$/D']]);
-        DB::transaction(function () use ($acceso, $input) {
-            $t = TramitePublico::where('codigo', $acceso['codigo'])->lockForUpdate()->firstOrFail();
+        DB::transaction(function () use ($id, $input) {
+            $t = TramitePublico::whereKey($id)->lockForUpdate()->firstOrFail();
             abort_unless($t->email_verificado_at && $t->pago?->estado === 'PAGADO', 403);
             $previas = $t->datos['canales_entrega'] ?? [];
             // The e-mail form does not carry the WhatsApp choice: keep it unless sent explicitly.
@@ -34,10 +33,9 @@ class CanalEntregaController extends Controller
      */
     public function whatsapp(Request $request, \App\Services\WhatsAppConsulta $consulta)
     {
-        $acceso = $request->session()->get('portal_acceso');
-        abort_unless($acceso && ($acceso['expira'] ?? 0) > now()->timestamp, 403);
-        $enlace = DB::transaction(function () use ($acceso, $consulta) {
-            $t = TramitePublico::where('codigo', $acceso['codigo'])->lockForUpdate()->firstOrFail();
+        $id = \App\Http\Middleware\EnsurePortalAccess::tramite($request)->id;
+        $enlace = DB::transaction(function () use ($id, $consulta) {
+            $t = TramitePublico::whereKey($id)->lockForUpdate()->firstOrFail();
             abort_unless($t->email_verificado_at && $t->pago?->estado === 'PAGADO', 403);
             $enlace = $consulta->enlace($t);
             abort_unless($enlace, 404);

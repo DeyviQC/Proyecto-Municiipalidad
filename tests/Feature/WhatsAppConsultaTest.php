@@ -58,7 +58,7 @@ class WhatsAppConsultaTest extends TestCase
     {
         $t = $this->tramite('CREANDO');
         $this->withSession($this->sesion($t))->get(route('portal.estado'))->assertOk()->assertDontSee('https://wa.me/', false);
-        $this->withSession(['portal_acceso' => null])->get(route('portal.estado'))->assertForbidden();
+        $this->withSession(['portal_acceso' => null])->get(route('portal.estado'))->assertRedirect(route('portal.seguimiento'));
         $this->assertSame(0, $t->eventos()->count());
     }
 

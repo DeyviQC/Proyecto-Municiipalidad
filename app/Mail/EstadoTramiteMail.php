@@ -36,8 +36,23 @@ class EstadoTramiteMail extends Mailable implements ShouldQueue
                 'numero' => $this->numero(),
                 'etiqueta' => $etiqueta,
                 'indicacion' => self::INDICACIONES[$this->estado] ?? null,
+                'enlace' => self::enlaceDirecto(TramitePublico::find($this->solicitud)),
             ]);
     }
+
+    /**
+     * Signed link that opens this request's tracking without asking for a new code.
+     * It only goes to the verified mailbox, which is what the code proves anyway.
+     */
+    public static function enlaceDirecto(?TramitePublico $tramite): ?string
+    {
+        if (! $tramite?->email_verificado_at) return null;
+        // Sign only the path: the link keeps working whether the site is opened by
+        // its domain or by IP (e.g. a laptop reached through 127.0.0.1 or a tunnel).
+        return url(\Illuminate\Support\Facades\URL::temporarySignedRoute('portal.acceso', now()->addDays(self::DIAS_ENLACE), ['codigo' => $tramite->codigo], false));
+    }
+
+    public const DIAS_ENLACE = 7;
 
     private function numero(): string
     {

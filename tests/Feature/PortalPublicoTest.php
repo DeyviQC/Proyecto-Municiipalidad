@@ -41,7 +41,7 @@ class PortalPublicoTest extends TestCase
         $this->assertStringContainsString('soy el titular', $registrado->datos['declaracion_detalle']['texto']);
         $this->assertSame(\App\Services\DeclaracionSolicitud::VERSION, $registrado->datos['declaracion_detalle']['version']);
         Mail::assertSent(CodigoTramite::class);
-        $this->get('/tramite/estado')->assertForbidden();
+        $this->get('/tramite/estado')->assertRedirect(route('portal.seguimiento'))->assertSessionHas('aviso');
     }
     public function test_codigo_un_solo_uso_caducidad_e_intentos(): void
     {

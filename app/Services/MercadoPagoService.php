@@ -122,8 +122,7 @@ class MercadoPagoService
             $tramite = $pago->tramite()->lockForUpdate()->firstOrFail();
             abort_unless($tramite->estado === 'PENDIENTE_PAGO', 409);
             $pago->update(['estado' => 'PAGADO', 'mercadopago_pago_id' => $id, 'pagado_at' => now()]);
-            $tramite->update(['estado' => 'PENDIENTE', 'version' => $tramite->version + 1]);
-            $tramite->eventos()->create(['estado' => 'PENDIENTE', 'mensaje' => 'Pago confirmado. Tu solicitud pasó a revisión del Registro Civil.']);
+            $tramite->transicionar('PENDIENTE', 'Pago confirmado. Tu solicitud pasó a revisión del Registro Civil.');
             return $tramite->codigo;
         });
     }

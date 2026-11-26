@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
             'active' => EnsureUserIsActive::class,
+            'portal.acceso' => \App\Http\Middleware\EnsurePortalAccess::class,
         ]);
 
         $middleware->web(append: [

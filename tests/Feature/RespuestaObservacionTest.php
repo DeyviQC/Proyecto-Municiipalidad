@@ -61,7 +61,7 @@ class RespuestaObservacionTest extends TestCase
 
         $this->actingAs($staff)->get(route('atencion.index'))->assertOk()->assertSee('Respondió la observación');
         $this->get(route('atencion.show', $t))->assertOk()
-            ->assertSee('Respuestas del ciudadano')->assertSee('dni.pdf')->assertSee('15/01/2020')->assertSee('Iniciar revisión');
+            ->assertSee('Respuestas del ciudadano')->assertSee('dni.pdf')->assertSee('15/01/2020')->assertSee('Aprobar solicitud')->assertDontSee('Iniciar revisión');
         $this->get(route('atencion.subsanacion', [$t, 0]))->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
         $this->get(route('atencion.subsanacion', [$t, 5]))->assertNotFound();
     }

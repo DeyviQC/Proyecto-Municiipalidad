@@ -11,9 +11,7 @@ use Illuminate\Support\Str;
 class YapeOrdersController extends Controller
 {
     private function solicitud(Request $request): TramitePublico {
-        $a = $request->session()->get('portal_acceso');
-        abort_unless(is_array($a) && ($a['expira'] ?? 0) > now()->timestamp, 403);
-        $t = TramitePublico::where('codigo', $a['codigo'])->whereNotNull('email_verificado_at')->firstOrFail();
+        $t = \App\Http\Middleware\EnsurePortalAccess::tramite($request);
         abort_unless($t->identidad_estado === 'DATOS_CONTRASTADOS', 409);
         return $t;
     }

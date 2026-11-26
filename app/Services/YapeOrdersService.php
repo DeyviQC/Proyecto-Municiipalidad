@@ -84,8 +84,7 @@ class YapeOrdersService
             $tramite = $actual->tramite()->lockForUpdate()->firstOrFail();
             abort_unless($tramite->estado === 'PENDIENTE_PAGO', 409);
             $actual->update(['estado' => 'PAGADO', 'pagado_at' => now()]);
-            $tramite->update(['estado' => 'PENDIENTE', 'version' => $tramite->version + 1]);
-            $tramite->eventos()->create(['estado' => 'PENDIENTE', 'mensaje' => 'Pago con Yape confirmado. Tu solicitud pasó a revisión del Registro Civil.']);
+            $tramite->transicionar('PENDIENTE', 'Pago con Yape confirmado. Tu solicitud pasó a revisión del Registro Civil.');
         });
         return 'aprobado';
     }

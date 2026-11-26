@@ -5,7 +5,24 @@
 <section class="card border-success mb-4"><div class="card-body p-4"><span class="citizen-eyebrow">TU ACTA YA ESTÁ LISTA</span><h2 class="h4 mt-2">Descarga tu documento firmado</h2><p>La revisión municipal ha finalizado. Guarda el PDF original para conservar su firma digital.</p><a href="{{ route('portal.documento') }}" class="btn btn-primary"><i class="bi bi-download me-2"></i>Descargar mi acta</a></div></section>
 @endif
 <div class="citizen-banner"><span class="citizen-eyebrow">SEGUIMIENTO DE SOLICITUD</span><h1>Solicitud N.º {{ str_pad((string) $tramite->id, 6, '0', STR_PAD_LEFT) }}</h1><p>Consulta el avance y las respuestas de Registro Civil.</p></div>
-@php $ultimoMensaje = $tramite->eventos->where('estado', $tramite->estado)->last()?->mensaje; @endphp
+@php
+$ultimoMensaje = $tramite->eventos->where('estado', $tramite->estado)->last()?->mensaje;
+// The next thing the citizen must do goes first: pay, then choose how to receive the act.
+$porPagar = $tramite->estado === 'PENDIENTE_PAGO' && $tramite->pago?->estado !== 'PAGADO';
+$eligeEntrega = $tramite->pago?->estado === 'PAGADO' && empty($tramite->datos['canales_entrega']) && ! in_array($tramite->estado, ['RECHAZADA', 'VENCIDA'], true);
+@endphp
+@if($porPagar)
+<section class="card border-primary mb-4" id="pagar" aria-labelledby="titulo-pagar"><div class="card-body p-4">
+<span class="citizen-eyebrow">ÚLTIMO PASO</span>
+<h2 class="h4 mt-2" id="titulo-pagar">Paga tu trámite para que lo revisemos</h2>
+<div class="mx-auto" style="max-width:520px">@include('portal.pago')</div>
+</div></section>
+@elseif($eligeEntrega)
+<section class="card border-success mb-4" id="entrega"><div class="card-body p-4">
+<span class="citizen-eyebrow">PAGO CONFIRMADO · ÚLTIMO PASO</span>
+<div class="mx-auto" style="max-width:520px">@include('portal.consulta-whatsapp')</div>
+</div></section>
+@endif
 @if($tramite->estado === 'OBSERVADA')
 <section class="card border-warning mb-4" id="responder-observacion"><div class="card-body p-4">
 <span class="citizen-eyebrow">TU SOLICITUD TIENE UNA OBSERVACIÓN</span>
@@ -26,26 +43,13 @@
 @if(session('portal_consultas'))<a href="{{ route('portal.solicitudes') }}" class="btn btn-outline-secondary mb-4"><i class="bi bi-arrow-left me-2"></i>Ver mis solicitudes</a>@endif
 <div class="citizen-status-grid"><div><section class="card"><div class="card-body"><span class="citizen-eyebrow">TU DOCUMENTO</span><h2 class="h4 mt-3">{{ ucfirst(strtolower($tramite->datos['busqueda']['tipo'] ?? $tramite->acta?->tipo ?? 'Acta')) }}</h2><p class="text-muted">{{ $tramite->datos['busqueda']['titular'] ?? '' }}</p><span class="citizen-status-label">{{ App\Models\TramitePublico::ESTADOS[$tramite->estado] }}</span><hr class="my-4"><p><strong>Relación declarada</strong><br>{{ App\Models\TramitePublico::RELACIONES[$tramite->datos['relacion'] ?? ''] ?? 'No informada' }}</p><p><strong>Motivo</strong><br>{{ $tramite->datos['motivo'] ?? 'No informado' }}</p><p class="small text-muted mb-0">El personal municipal revisará si corresponde autorizar la entrega y podrá pedir sustento adicional.</p></div></section>
 <section class="card"><div class="card-body"><span class="citizen-eyebrow">HISTORIAL DE ATENCIÓN</span><h2 class="h5 mt-3 mb-4">Últimos movimientos</h2><div class="citizen-timeline">@forelse($tramite->eventos->reverse() as $evento)<div><strong>{{ App\Models\TramitePublico::ESTADOS[$evento->estado] ?? $evento->estado }}</strong><p class="small mb-2">{{ $evento->created_at->format('d/m/Y · H:i') }}</p><p>{{ $evento->mensaje }}</p></div>@empty<p class="text-muted small">{{ $tramite->pago?->estado === 'PAGADO' ? 'Tu pago está confirmado. Aquí aparecerán las respuestas de Registro Civil.' : 'Aquí verás los avances después de confirmar tu pago.' }}</p>@endforelse</div></div></section></div>
-<aside class="card"><div class="card-body"><span class="citizen-eyebrow">PAGO DEL TRÁMITE</span><div class="citizen-price">S/ 10.30 <small>por acta</small></div>
-@if($tramite->pago?->estado === 'PAGADO')<div class="alert alert-success"><i class="bi bi-check-circle me-2"></i><strong>Pago confirmado</strong><p class="mb-0 mt-2">{{ $tramite->estado === 'PENDIENTE' ? 'Tu solicitud está pendiente de atención por el Registro Civil.' : 'Revisa el historial para conocer el avance de tu solicitud.' }}</p></div>
-@elseif($tramite->estado === 'VENCIDA')<div class="alert alert-warning">Esta solicitud venció porque no se inició el pago a tiempo. No se realizó ningún cobro. Puedes iniciar una nueva búsqueda cuando lo necesites.</div>
-@elseif($tramite->pago?->yape_intento)<div class="alert alert-info small">Tienes un pago con Yape en proceso. No pagues otra vez: comprueba su resultado.</div><a href="{{ route('yape.formulario') }}" class="btn btn-primary w-100">Comprobar mi pago con Yape</a>
-@elseif($tramite->pago?->estado === 'VENCIDO')<div class="alert alert-warning">La orden de prueba venció. Consulta al personal antes de realizar otro pago.</div>
-@elseif($tramite->pago?->qr && $tramite->pago->expira_at?->isFuture())<h3 class="h6">Escanea con Yape · Pago de prueba</h3><img src="{{ $tramite->pago->qr }}" alt="QR de pago para esta solicitud" style="max-width:280px;width:100%"><p class="small">Vence: {{ $tramite->pago->expira_at->format('d/m/Y H:i') }}</p><a href="{{ route('portal.estado') }}" class="btn btn-primary w-100">Comprobar confirmación</a>
-@elseif($tramite->pago?->proveedor_id)<div class="alert alert-warning">El sistema espera la confirmación del proveedor. No realices otro pago.</div>
-@elseif($tramite->pago && $tramite->pago->proveedor !== 'MERCADOPAGO')<div class="alert alert-warning">Esta solicitud tiene una orden con la pasarela anterior. Contacta a Registro Civil para revisar su estado antes de pagar nuevamente.</div>
+<aside class="card"><div class="card-body">
+@if($porPagar)
+<span class="citizen-eyebrow">PAGO DEL TRÁMITE</span>
+<p class="mt-2 mb-0">Tu pago está pendiente. <a href="#pagar">Paga arriba</a> para que Registro Civil revise tu solicitud.</p>
 @else
-@php $checkoutAbierto = (bool) $tramite->pago?->mercadopago_preferencia_id; @endphp
-<p class="h5 fw-bold mb-1">{{ $checkoutAbierto ? 'Completa tu pago con tarjeta' : 'Paga fácil' }}</p>
-<p class="small text-muted">{{ $checkoutAbierto ? 'Ya abriste el pago con tarjeta. Si lo completaste, comprueba el resultado.' : 'Paga en segundos con Yape desde tu celular. También aceptamos tarjeta.' }}</p>
-@unless($checkoutAbierto)
-<a href="{{ route('yape.formulario') }}" class="btn btn-primary w-100 text-start d-flex align-items-center gap-3 py-3 mb-2 position-relative"><i class="bi bi-phone fs-3" aria-hidden="true"></i><span class="flex-grow-1"><strong class="d-block fs-5">Pagar con Yape</strong><small class="fw-normal">Rápido y sin tarjeta</small></span><span class="badge rounded-pill bg-warning text-dark">Más usado</span></a>
-<p class="small text-muted text-center my-2">o</p>
-@endunless
-<form method="POST" action="{{ route('mercadopago.pagar') }}">@csrf<button class="btn {{ $checkoutAbierto ? 'btn-primary' : 'btn-outline-primary' }} w-100 text-start d-flex align-items-center gap-3 {{ $checkoutAbierto ? 'py-3' : 'py-2' }}"><i class="bi bi-credit-card fs-4" aria-hidden="true"></i><span><strong class="d-block">{{ $checkoutAbierto ? 'Volver al pago con tarjeta' : 'Pagar con tarjeta' }}</strong><small class="fw-normal">Débito o crédito, en la página segura de Mercado Pago</small></span></button></form>
-@if($checkoutAbierto)<form method="POST" action="{{ route('mercadopago.comprobar') }}" class="mt-2">@csrf<button class="btn btn-outline-primary w-100"><i class="bi bi-arrow-repeat me-2" aria-hidden="true"></i>Ya pagué, comprobar pago</button></form>@endif
-<p class="small text-muted mt-3 mb-0">Modo de prueba · No se cobra dinero real.</p>
+@include('portal.pago')
+@unless($eligeEntrega)@include('portal.consulta-whatsapp')@endunless
 @endif
-@include('portal.consulta-whatsapp')
 </div></aside></div>
 @endsection

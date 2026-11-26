@@ -114,8 +114,8 @@ class EntregaDocumentoController extends Controller
             $disk = Storage::disk('local');
             abort_unless($disk->exists($entrega['firmado_ruta']) && hash_equals($entrega['firmado_sha256'], hash_file('sha256', $disk->path($entrega['firmado_ruta']))), 409);
             $entrega['revision'] = ['usuario_id' => $request->user()->id, 'fecha' => now()->toIso8601String(), 'sustento' => $request->string('sustento_firma')->toString()];
-            $actual->update(['estado' => 'LISTA', 'datos' => array_merge($actual->datos, ['entrega' => $entrega]), 'version' => $actual->version + 1]);
-            $actual->eventos()->create(['usuario_id' => $request->user()->id, 'estado' => 'LISTA', 'mensaje' => 'Tu documento firmado está disponible para descargar en este seguimiento.']);
+            $actual->datos = array_merge($actual->datos, ['entrega' => $entrega]);
+            $actual->transicionar('LISTA', 'Tu documento firmado está disponible para descargar en este seguimiento.', $request->user()->id);
             $audit->registrar('PUBLICAR_DOCUMENTO', 'Portal ciudadano', $actual->id, 'Documento disponible en seguimiento protegido.');
         });
         $mensaje = 'Documento publicado. El ciudadano ya puede descargarlo y recibió el aviso.';

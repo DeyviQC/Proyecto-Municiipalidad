@@ -69,7 +69,7 @@ class EntregaDocumentoTest extends TestCase
         $this->assertSame('LISTA', $t->fresh()->estado);
         $this->withSession($session)->get(route('portal.documento'))->assertOk()->assertDownload('mi-acta-firmada.pdf')->assertHeader('X-Content-Type-Options', 'nosniff');
         $this->get(route('portal.estado'))->assertOk()->assertSee('Descargar mi acta');
-        $this->withSession(['portal_acceso' => ['codigo' => $t->codigo, 'expira' => now()->subMinute()->timestamp]])->get(route('portal.documento'))->assertForbidden();
+        $this->withSession(['portal_acceso' => ['codigo' => $t->codigo, 'expira' => now()->subMinute()->timestamp]])->get(route('portal.documento'))->assertRedirect(route('portal.seguimiento'));
         $this->post(route('entrega.descartar', $t), ['version' => 4, 'motivo_descarte' => 'No corresponde el archivo'])->assertForbidden();
     }
 
