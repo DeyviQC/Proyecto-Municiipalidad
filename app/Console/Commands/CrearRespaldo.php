@@ -36,6 +36,7 @@ class CrearRespaldo extends Command
             $ok = $this->respaldarBaseDatos($destino.'/base-datos') && $ok;
             $this->limpiarVolcadosAntiguos($destino.'/base-datos');
         }
+        $ok = $this->respaldarClave($destino) && $ok;
         [$copiados, $total] = $this->espejo($origen, $destino.'/archivos');
         $this->info("Archivos: {$copiados} copiados de {$total} revisados.");
 
@@ -80,6 +81,37 @@ class CrearRespaldo extends Command
         }
 
         return $this->comprimir($temporal, $archivo.'.sql.gz', true);
+    }
+
+    /**
+     * Citizen data is encrypted with APP_KEY: a database dump is useless without it.
+     * Keep a copy next to the dump, encrypted with a passphrase that never lives in the backup.
+     */
+    private function respaldarClave(string $destino): bool
+    {
+        $frase = (string) config('respaldo.frase');
+        if (strlen($frase) < 12) {
+            $this->error('Configura RESPALDO_FRASE (mínimo 12 caracteres) para respaldar la APP_KEY. Sin ella el respaldo de la base es ilegible.');
+            return false;
+        }
+        $sal = random_bytes(16);
+        $iv = random_bytes(12);
+        $llave = hash_pbkdf2('sha256', $frase, $sal, 200000, 32, true);
+        $cifrada = openssl_encrypt((string) config('app.key'), 'aes-256-gcm', $llave, OPENSSL_RAW_DATA, $iv, $tag);
+        File::put($destino.'/app-key.enc', 'v1:'.base64_encode($sal.$iv.$tag.$cifrada).PHP_EOL);
+        $this->info('APP_KEY respaldada cifrada en app-key.enc.');
+        return true;
+    }
+
+    /** Inverse of respaldarClave(), used by "respaldo:clave". */
+    public static function descifrarClave(string $contenido, string $frase): ?string
+    {
+        if (!str_starts_with(trim($contenido), 'v1:')) return null;
+        $bin = base64_decode(substr(trim($contenido), 3), true);
+        if ($bin === false || strlen($bin) < 45) return null;
+        $llave = hash_pbkdf2('sha256', $frase, substr($bin, 0, 16), 200000, 32, true);
+        $clave = openssl_decrypt(substr($bin, 44), 'aes-256-gcm', $llave, OPENSSL_RAW_DATA, substr($bin, 16, 12), substr($bin, 28, 16));
+        return $clave === false ? null : $clave;
     }
 
     private function comprimir(string $origen, string $destino, bool $borrarOrigen): bool

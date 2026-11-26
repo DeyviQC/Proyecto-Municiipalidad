@@ -27,12 +27,12 @@
         <a href="{{ route('actas.pdf', $acta) }}">Abrir PDF original</a>
     </div>
     <div id="paginas"></div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="{{ asset('vendor/pdfjs/pdf.min.js') }}"></script>
     <script>
     async function prepararImpresion() {
         const estado = document.getElementById('estado');
         try {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '{{ asset('vendor/pdfjs/pdf.worker.min.js') }}';
             const pdf = await pdfjsLib.getDocument(@json(route('actas.pdf', $acta))).promise;
             for (let numero=1; numero<=pdf.numPages; numero++) {
                 estado.textContent = 'Preparando página '+numero+' de '+pdf.numPages+'…';

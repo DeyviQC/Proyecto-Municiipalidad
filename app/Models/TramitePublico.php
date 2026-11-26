@@ -8,7 +8,20 @@ class TramitePublico extends Model
 {
     protected $table = 'tramites_publicos';
     protected $guarded = ['id'];
-    protected $hidden = ['datos', 'email', 'otp_hash'];
+    protected $hidden = ['datos', 'email', 'otp_hash', 'dni_hash'];
+
+    /** Keyed hash of a DNI (blind index): exact, indexed lookups without storing the DNI in clear text. */
+    public static function hashDni(?string $dni): ?string
+    {
+        return $dni && preg_match('/^[0-9]{8}$/D', $dni) ? hash_hmac('sha256', 'dni:'.$dni, (string) config('app.key')) : null;
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (TramitePublico $tramite) {
+            if ($tramite->isDirty('datos')) $tramite->dni_hash = self::hashDni($tramite->datos['dni'] ?? null);
+        });
+    }
     public const RELACIONES = ['titular' => 'Soy el titular del acta', 'madre' => 'Soy la madre', 'padre' => 'Soy el padre', 'representante' => 'Soy representante', 'otro' => 'Otra relación'];
 
     public function requiereRevisionVinculo(): bool

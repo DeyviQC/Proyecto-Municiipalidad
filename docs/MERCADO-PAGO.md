@@ -30,7 +30,7 @@ No se necesita Public Key para esta modalidad de redirección: el Access Token s
 
 ## Historial y reintentos
 
-Las órdenes antiguas de Izipay/TAYPI y sus callbacks se conservan para reconciliación. No se cambia su proveedor ni se ofrece otra pasarela mientras su estado esté sin resolver. Las nuevas solicitudes usan Mercado Pago.
+Las órdenes de prueba antiguas de Izipay/TAYPI quedan como historial: sus callbacks se eliminaron. Esas solicitudes no cambian de proveedor ni se les ofrece otra pasarela (el ciudadano ve que debe consultar a Registro Civil). Las nuevas solicitudes usan Mercado Pago.
 
 Una preferencia guardada se reutiliza; no se crea otra por cada clic. Si la creación falla antes de guardar la respuesta, el siguiente clic vuelve a crearla con la **misma** referencia (`external_reference`): una preferencia no es un cobro y cualquier pago se concilia con esa referencia. Reembolsos y contracargos posteriores requieren revisión municipal y no están automatizados en esta integración de prueba.
 

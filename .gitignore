@@ -34,3 +34,4 @@ yarn-error.log
 
 # Configuración local del editor/Claude (rutas propias de esta laptop)
 /.claude/
+/scripts/windows/schedule-run.vbs

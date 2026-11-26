@@ -28,15 +28,12 @@ Route::prefix('tramite')->name('portal.')->group(function () {
     Route::get('/seguimiento', [\App\Http\Controllers\PortalPublicoController::class, 'seguimiento'])->name('seguimiento');
     Route::post('/seguimiento', [\App\Http\Controllers\PortalPublicoController::class, 'recuperar'])->middleware('throttle:3,10')->name('recuperar');
 });
-Route::post('/pagos/taypi/notificacion', \App\Http\Controllers\TaypiWebhookController::class)->middleware('throttle:60,1')->name('taypi.notificacion');
 Route::post('/tramite/pagar-mercadopago', [\App\Http\Controllers\MercadoPagoController::class, 'pagar'])->middleware('throttle:portal-pago')->name('mercadopago.pagar');
 Route::get('/tramite/yape', [\App\Http\Controllers\YapeOrdersController::class, 'formulario'])->name('yape.formulario');
 Route::post('/tramite/yape', [\App\Http\Controllers\YapeOrdersController::class, 'pagar'])->middleware('throttle:portal-pago')->name('yape.pagar');
 Route::post('/tramite/mercadopago/comprobar', [\App\Http\Controllers\MercadoPagoController::class, 'comprobar'])->middleware('throttle:10,1')->name('mercadopago.comprobar');
 Route::get('/pagos/mercadopago/retorno', [\App\Http\Controllers\MercadoPagoController::class, 'retorno'])->middleware('throttle:30,1,mp-retorno:')->name('mercadopago.retorno');
 Route::post('/pagos/mercadopago/notificacion', [\App\Http\Controllers\MercadoPagoController::class, 'notificacion'])->middleware('throttle:60,1,mp-webhook:')->name('mercadopago.notificacion');
-Route::post('/pagos/izipay/retorno', [\App\Http\Controllers\IzipayController::class, 'retorno'])->middleware('throttle:60,1')->name('izipay.retorno');
-Route::post('/pagos/izipay/notificacion', [\App\Http\Controllers\IzipayController::class, 'notificacion'])->middleware('throttle:60,1')->name('izipay.notificacion');
 Route::prefix('firma-peru/{tramite}/{intento}')->name('firmaperu.')->middleware('throttle:30,1')->group(function () {
     Route::post('/parametros', [\App\Http\Controllers\FirmaPeruController::class, 'parametros'])->name('parametros');
     Route::get('/documento', [\App\Http\Controllers\FirmaPeruController::class, 'documento'])->name('documento');
@@ -65,16 +62,10 @@ Route::post('/logout', [AuthController::class, 'logout'])
 
 Route::get('/', function () {
     if (!auth()->check()) return redirect()->route('login');
-    return redirect()->route(auth()->user()->isCiudadano() ? 'ciudadano.solicitudes.index' : 'dashboard');
+    return redirect()->route('dashboard');
 });
-
-Route::middleware(['auth', 'role:ciudadano'])->prefix('ciudadano/solicitudes')->name('ciudadano.solicitudes.')->group(function () {
-    Route::get('/', [\App\Http\Controllers\SolicitudController::class, 'index'])->name('index');
-    Route::get('/nueva', [\App\Http\Controllers\SolicitudController::class, 'create'])->name('create');
-    Route::post('/', [\App\Http\Controllers\SolicitudController::class, 'store'])->middleware('throttle:10,1')->name('store');
-    Route::get('/{solicitud}', [\App\Http\Controllers\SolicitudController::class, 'show'])->name('show');
-    Route::patch('/{solicitud}', [\App\Http\Controllers\SolicitudController::class, 'update'])->name('update');
-});
+// Old citizen-account module: citizens now use the portal without an account.
+Route::redirect('/ciudadano/solicitudes', '/tramite/seguimiento');
 
 /*
 |--------------------------------------------------------------------------
@@ -102,9 +93,6 @@ Route::middleware(['auth', 'role:administrador,asistente'])->group(function () {
     Route::post('/atencion-ciudadana/{tramite}/firma-peru/iniciar', [\App\Http\Controllers\FirmaPeruController::class, 'iniciar'])->middleware('throttle:5,1')->name('firmaperu.iniciar');
     Route::get('/atencion-ciudadana/{tramite}/firma-peru/estado', [\App\Http\Controllers\FirmaPeruController::class, 'estado'])->name('firmaperu.estado');
     Route::post('/atencion-ciudadana/{tramite}/firma-peru/cancelar', [\App\Http\Controllers\FirmaPeruController::class, 'cancelar'])->name('firmaperu.cancelar');
-    Route::get('/solicitudes', [\App\Http\Controllers\SolicitudController::class, 'index'])->name('solicitudes.index');
-    Route::get('/solicitudes/{solicitud}', [\App\Http\Controllers\SolicitudController::class, 'show'])->name('solicitudes.show');
-    Route::patch('/solicitudes/{solicitud}/estado', [\App\Http\Controllers\SolicitudController::class, 'atender'])->name('solicitudes.atender');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/reportes', [\App\Http\Controllers\ReporteController::class, 'index'])->name('reportes.index');

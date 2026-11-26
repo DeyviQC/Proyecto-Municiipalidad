@@ -1,12 +1,14 @@
 # Trámite público y proveedores
 
-Implementación en desarrollo: `/tramite`. La antigua pantalla de registro redirige allí. Las cuentas y solicitudes anteriores se conservan como datos históricos; el nuevo flujo no crea usuarios.
+Implementación en desarrollo: `/tramite`. La antigua pantalla de registro y `/ciudadano/solicitudes` redirigen al portal. El módulo de cuentas ciudadanas se eliminó (no tenía datos); el panel solo admite personal (administrador y asistente).
+
+> **Pasarelas retiradas (nov. 2026):** TAYPI e Izipay se eliminaron del código. Los pagos de prueba se hacen solo con Mercado Pago (Checkout Pro y Yape Orders, sandbox); ver `MERCADO-PAGO.md`. Las referencias a TAYPI de este documento son históricas.
 
 ## Implementado
 
 - Aceptación versionada de términos de demostración, sin casilla preseleccionada.
 - Búsqueda por tipo, fecha del hecho y nombres normalizados, sin devolver datos del archivo. Solo coincidencia única con PDF disponible permite continuar. No encontrado no significa inexistente en físico.
-- Datos del solicitante cifrados en base de datos mediante APP_KEY. Mantener respaldo seguro de esa clave.
+- Datos del solicitante cifrados en base de datos mediante APP_KEY. El respaldo diario guarda `app-key.enc` cifrado con `RESPALDO_FRASE`; se recupera con `php artisan respaldo:clave`. El DNI tiene además un índice ciego (`dni_hash`, HMAC) para buscar sin descifrar.
 - APIsPERU: contraste DNI, nombres y dígito si el proveedor lo devuelve. Nacimiento y ubigeo no están en su esquema DNI documentado y permanecen declarados. No acredita por sí solo identidad ni derecho a recibir documentos.
 - Correo obligatorio, WhatsApp opcional. Código de 6 dígitos, 10 minutos, cinco intentos, hash en base de datos y un minuto entre reenvíos. El código no se muestra en la web. MAIL_MAILER=log no envía correos reales; el código queda en el log privado para pruebas.
 - Acceso de seguimiento mediante referencia, correo y nuevo código; autorización de sesión válida por 30 minutos.

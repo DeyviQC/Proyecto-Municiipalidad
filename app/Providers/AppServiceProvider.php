@@ -60,12 +60,11 @@ class AppServiceProvider extends ServiceProvider
         }
         Paginator::useBootstrapFive();
         \Illuminate\Support\Facades\View::composer('layouts.app', function ($view) {
-            $pendientes = auth()->check() && !auth()->user()->isCiudadano()
+            $pendientes = auth()->check()
                 ? Acta::where('estado', Acta::ESTADO_BORRADOR)->whereNull('pdf_ruta')->count() : 0;
             $view->with('pendientesPdfMenu', $pendientes);
         });
         Gate::policy(Acta::class, ActaPolicy::class);
-        Gate::policy(\App\Models\Solicitud::class, \App\Policies\SolicitudPolicy::class);
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Auditoria::class, AuditoriaPolicy::class);
     }

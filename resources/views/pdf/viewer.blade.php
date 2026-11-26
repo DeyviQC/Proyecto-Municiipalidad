@@ -26,10 +26,10 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="{{ asset('vendor/pdfjs/pdf.min.js') }}"></script>
 <script>
 const urlPdf = @json(route('actas.pdf', $acta));
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = '{{ asset('vendor/pdfjs/pdf.worker.min.js') }}';
 
 let pdfDoc = null, paginaActual = 1, escala = 1.2;
 const canvas = document.getElementById('visorPdfCanvas');

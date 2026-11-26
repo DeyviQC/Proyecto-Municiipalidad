@@ -10,4 +10,9 @@ return [
 
     // Ejecutable de mysqldump (en Herd/DBngin puede requerir la ruta completa).
     'mysqldump' => env('RESPALDO_MYSQLDUMP', 'mysqldump'),
+
+    // Frase con la que se cifra la copia de APP_KEY (app-key.enc). Guárdala FUERA
+    // de este equipo (gestor de contraseñas o papel): sin APP_KEY los datos
+    // cifrados de los ciudadanos del respaldo no se pueden leer.
+    'frase' => env('RESPALDO_FRASE'),
 ];

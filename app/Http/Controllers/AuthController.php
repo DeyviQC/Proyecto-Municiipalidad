@@ -57,15 +57,20 @@ class AuthController extends Controller
             ]);
         }
 
+        // The panel is for municipal staff only; citizens use the portal without an account.
+        if (! Auth::user()->isAdmin() && ! Auth::user()->isAsistente()) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'username' => 'Esta cuenta no tiene acceso al panel. Los trámites ciudadanos se realizan en '.route('portal.inicio').'.',
+            ]);
+        }
+
         \Illuminate\Support\Facades\RateLimiter::clear($this->claveLimitador($request));
         $request->session()->regenerate();
 
         $this->auditoriaService->registrar(AuditoriaService::LOGIN, 'Autenticación');
 
-        if (Auth::user()->isCiudadano()) {
-            $request->session()->forget('url.intended');
-            return redirect()->route('ciudadano.solicitudes.index');
-        }
         return redirect()->intended(route('dashboard'));
     }
 

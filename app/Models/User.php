@@ -79,8 +79,4 @@ class User extends Authenticatable
         return $this->hasRole('asistente');
     }
 
-    public function isCiudadano(): bool
-    {
-        return $this->hasRole('ciudadano') && !$this->isAdmin() && !$this->isAsistente();
-    }
 }

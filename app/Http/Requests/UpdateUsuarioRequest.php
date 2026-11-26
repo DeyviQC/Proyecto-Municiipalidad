@@ -22,7 +22,7 @@ class UpdateUsuarioRequest extends FormRequest
             'username' => ['required', 'string', 'max:50', 'alpha_dash', Rule::unique('users', 'username')->ignore($usuarioId)],
             'email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($usuarioId)],
             'password' => ['nullable', 'confirmed', Password::min(8)->mixedCase()->numbers()],
-            'role' => ['required', 'in:administrador,asistente,ciudadano'],
+            'role' => ['required', 'in:administrador,asistente'],
             'is_active' => ['required', 'boolean'],
         ];
     }

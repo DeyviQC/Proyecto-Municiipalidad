@@ -62,25 +62,6 @@ class PortalPublicoTest extends TestCase
         $this->travel(11)->minutes();
         $this->assertFalse($servicio->verificar($tramite, $codigo));
     }
-    public function test_webhook_rechaza_falso_importe_y_no_duplica_confirmacion(): void
-    {
-        config(['portal.taypi.webhook_secret' => 'secreto-prueba']);
-        $tramite = $this->tramite();
-        $pago = PagoTramite::create(['tramite_publico_id' => $tramite->id, 'idempotencia' => (string) Str::uuid(), 'proveedor_id' => (string) Str::uuid(), 'importe_centimos' => 1030]);
-        $datos = ['event' => 'payment.completed', 'payment_id' => $pago->proveedor_id, 'amount' => '10.30', 'currency' => 'PEN', 'reference' => $tramite->codigo, 'status' => 'completed'];
-        $this->postJson('/pagos/taypi/notificacion', $datos)->assertUnauthorized();
-        $enviar = function ($datos) {
-            $body = json_encode($datos);
-            return $this->call('POST', '/pagos/taypi/notificacion', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json', 'HTTP_TAYPI_SIGNATURE' => 'sha256='.hash_hmac('sha256', $body, 'secreto-prueba')], $body);
-        };
-        $enviar(array_replace($datos, ['amount' => '1.00']))->assertUnprocessable();
-        $this->assertSame('CREANDO', $pago->fresh()->estado);
-        $enviar($datos)->assertOk();
-        $enviar($datos)->assertOk();
-        $this->assertSame('PAGADO', $pago->fresh()->estado);
-        $this->assertSame('PENDIENTE', $tramite->fresh()->estado);
-        $this->assertCount(1, $tramite->eventos);
-    }
 
     public function test_padre_de_menor_puede_pagar_pero_no_aprobarse_sin_revision_del_vinculo(): void
     {

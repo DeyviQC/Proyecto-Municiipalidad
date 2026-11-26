@@ -6,8 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('titulo', 'Registro Civil') | Municipalidad</title>
     <link rel="icon" type="image/jpeg" href="{{ asset('img/logo.jpg') }}">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('vendor/bootstrap-icons/bootstrap-icons.min.css') }}" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -28,10 +28,6 @@
                 <small class="text-white-50">Andrés Avelino Cáceres Dorregaray</small>
             </div>
             <ul class="nav nav-pills flex-column gap-1">
-                @if(auth()->user()->isCiudadano())
-                <li class="nav-item"><a href="{{ route('ciudadano.solicitudes.index') }}" class="nav-link active"><i class="bi bi-inbox me-2"></i> Mis solicitudes</a></li>
-                <li class="nav-item"><a href="{{ route('ciudadano.solicitudes.create') }}" class="nav-link"><i class="bi bi-plus-circle me-2"></i> Solicitar acta</a></li>
-                @else
                 <li class="nav-section-label" aria-hidden="true">ATENCIÓN Y ARCHIVO</li>
                 <li class="nav-item"><a href="{{ route('atencion.index') }}" class="nav-link {{ request()->routeIs('atencion.*') ? 'active' : '' }}"><i class="bi bi-inbox me-2"></i> Solicitudes ciudadanas</a></li>
                 <li class="nav-item">
@@ -66,7 +62,6 @@
                 </li>
 
                 @endcan
-                @endif
             </ul>
             <div class="mt-auto pt-3 border-top border-light-subtle">
                 <form method="POST" action="{{ route('logout') }}">
@@ -84,19 +79,19 @@
             <header class="header-municipal d-flex align-items-center justify-content-between px-4 py-3">
                 <div class="d-flex align-items-center gap-2">
                     <button type="button" id="abrirMenu" class="btn btn-outline-primary d-lg-none" aria-controls="sidebar" aria-expanded="false">☰ Menú</button>
-                    <div class="system-identity"><span>Registro Civil</span><small>{{ auth()->user()->isCiudadano() ? 'Portal ciudadano' : 'Gestión municipal' }}</small></div>
+                    <div class="system-identity"><span>Registro Civil</span><small>Gestión municipal</small></div>
                 </div>
                 <div class="profile-box d-flex align-items-center justify-content-end gap-3">
                     <div class="profile-avatar d-flex align-items-center justify-content-center">
-                        @if(!auth()->user()->isCiudadano() && auth()->user()->foto)<img src="{{ route('perfil.foto') }}" alt="Su foto de perfil" style="width:100%;height:100%;object-fit:cover;border-radius:50%">@else{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}@endif
+                        @if(auth()->user()->foto)<img src="{{ route('perfil.foto') }}" alt="Su foto de perfil" style="width:100%;height:100%;object-fit:cover;border-radius:50%">@else{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}@endif
                     </div>
                     <div class="text-start">
                         <div class="fw-semibold profile-name">{{ auth()->user()->name }}</div>
                         <small class="profile-role">
-                            {{ auth()->user()->isAdmin() ? 'Administrador' : (auth()->user()->isCiudadano() ? 'Ciudadano' : 'Asistente') }}
+                            {{ auth()->user()->isAdmin() ? 'Administrador' : 'Asistente' }}
                         </small>
                     </div>
-                    @unless(auth()->user()->isCiudadano())<a href="{{ route('perfil.edit') }}" class="profile-action d-flex align-items-center justify-content-center" aria-label="Abrir mi perfil"><i class="bi bi-person" aria-hidden="true"></i></a>@endunless
+                    <a href="{{ route('perfil.edit') }}" class="profile-action d-flex align-items-center justify-content-center" aria-label="Abrir mi perfil"><i class="bi bi-person" aria-hidden="true"></i></a>
                 </div>
             </header>
 
@@ -135,7 +130,7 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}"></script>
 <script>
 // Menú en pantallas pequeñas, con cierre y manejo del foco.

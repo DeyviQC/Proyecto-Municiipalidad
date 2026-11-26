@@ -110,12 +110,23 @@ class AvisosMantenimientoRespaldoTest extends TestCase
         $archivo = storage_path('app/private/actas-prueba-respaldo/acta.pdf');
         File::ensureDirectoryExists(dirname($archivo));
         File::put($archivo, '%PDF-1.4 respaldo');
-        config(['respaldo.ruta' => $destino]);
+        config(['respaldo.ruta' => $destino, 'respaldo.frase' => 'frase-de-prueba-larga']);
 
         try {
             $this->artisan('respaldo:crear')->expectsOutputToContain('copiados')->assertSuccessful();
             $this->assertFileEquals($archivo, $destino.'/archivos/actas-prueba-respaldo/acta.pdf');
             $this->assertFileExists($destino.'/ultimo-respaldo.txt');
+            // The APP_KEY copy is encrypted and only the passphrase opens it.
+            $enc = File::get($destino.'/app-key.enc');
+            $this->assertStringNotContainsString(config('app.key'), $enc);
+            $this->assertSame(config('app.key'), \App\Console\Commands\CrearRespaldo::descifrarClave($enc, 'frase-de-prueba-larga'));
+            $this->assertNull(\App\Console\Commands\CrearRespaldo::descifrarClave($enc, 'otra-frase-cualquiera'));
+            $this->artisan('respaldo:clave', ['archivo' => $destino.'/app-key.enc'])
+                ->expectsQuestion('Frase del respaldo (RESPALDO_FRASE)', 'frase-de-prueba-larga')
+                ->expectsOutputToContain('APP_KEY=')->assertSuccessful();
+            config(['respaldo.frase' => null]);
+            $this->artisan('respaldo:crear', ['--solo-archivos' => true])->expectsOutputToContain('RESPALDO_FRASE')->assertFailed();
+            config(['respaldo.frase' => 'frase-de-prueba-larga']);
             // Second run copies nothing new.
             $this->artisan('respaldo:crear', ['--solo-archivos' => true])->expectsOutputToContain('Archivos: 0 copiados')->assertSuccessful();
         } finally {

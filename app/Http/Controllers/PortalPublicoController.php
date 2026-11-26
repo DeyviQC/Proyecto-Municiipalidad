@@ -150,10 +150,10 @@ class PortalPublicoController extends Controller
     public function recuperar(Request $request, CodigoTramiteService $codigos)
     {
         $datos = $request->validate(['dni' => ['required', 'regex:/^[0-9]{8}$/'], 'email' => ['required', 'email', 'max:255']]);
-        // Personal details remain encrypted in storage; filter only the supplied
-        // mailbox's requests, then match the applicant (never the act holder).
-        $ids = TramitePublico::where('email', strtolower($datos['email']))->orderByDesc('id')->cursor()
-            ->filter(fn ($tramite) => ($tramite->datos['dni'] ?? null) === $datos['dni'])->pluck('id')->all();
+        // Personal details remain encrypted in storage; both columns are indexed and the
+        // DNI is matched through its keyed hash (the applicant's, never the act holder's).
+        $ids = TramitePublico::where('email', strtolower($datos['email']))
+            ->where('dni_hash', TramitePublico::hashDni($datos['dni']))->orderByDesc('id')->pluck('id')->all();
         $tramite = $ids ? TramitePublico::find($ids[0]) : null;
         // Always show the same result, including for unknown references.
         $request->session()->forget(['portal_acceso', 'portal_consultas']);

@@ -19,12 +19,14 @@ class AtencionPublicaController extends Controller
 
     public function index(Request $request)
     {
-        $filtros = $request->validate(['estado' => ['nullable', Rule::in(array_keys(TramitePublico::ESTADOS))], 'solicitud' => 'nullable|integer|min:1|max:2147483647']);
+        $filtros = $request->validate(['estado' => ['nullable', Rule::in(array_keys(TramitePublico::ESTADOS))], 'solicitud' => 'nullable|integer|min:1|max:2147483647', 'dni' => ['nullable', 'regex:/^[0-9]{8}$/']],
+            ['dni.regex' => 'El DNI debe tener 8 dígitos.']);
         $base = TramitePublico::whereHas('pago', fn ($q) => $q->where('estado', 'PAGADO'));
         $resumen = (clone $base)->selectRaw('estado, COUNT(*) AS total')->groupBy('estado')->pluck('total', 'estado');
         $tramites = (clone $base)
             ->when($filtros['estado'] ?? null, fn ($q, $estado) => $q->where('estado', $estado))
             ->when($filtros['solicitud'] ?? null, fn ($q, $numero) => $q->where('id', $numero))
+            ->when($filtros['dni'] ?? null, fn ($q, $dni) => $q->where('dni_hash', TramitePublico::hashDni($dni)))
             ->latest('id')->paginate(15)->withQueryString();
         return view('portal.bandeja', compact('tramites', 'resumen', 'filtros'));
     }
