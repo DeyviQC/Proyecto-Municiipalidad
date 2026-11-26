@@ -35,7 +35,7 @@ Proyecto universitario: entorno local (laptop) y servicios en la nube gratuitos.
 |---|---|---|---|---|
 | AC01 | Rendimiento | p95 < 1 s en búsqueda pública, seguimiento, búsqueda del archivo y bandeja, con **20 usuarios** durante 2 min; errores < 1 % | Script k6 con perfiles ciudadano y personal sobre 10 000 actas | ✅ Cumple — [AC01](AC01-rendimiento.md) |
 | AC02 | Disponibilidad | Ante cada fallo simulado, el sistema informa el error y **no** aprueba, confirma pagos ni entrega documentos (100 % de casos) | Simular caída de ApisPeru, Mercado Pago, correo y MySQL; repetir las peticiones con Postman | AC02 |
-| AC03 | Escalabilidad | Con 50 usuarios y 50 000 actas, el p95 no supera el doble del de AC01 y los errores siguen < 1 % | Mismo script de AC01, subiendo usuarios (10→20→50) y datos (10 000→50 000) | AC03 |
+| AC03 | Escalabilidad | Con 50 usuarios y 50 000 actas, el p95 no supera el doble del de AC01 y los errores siguen < 1 % | Mismo script de AC01, subiendo usuarios (10→20→50) y datos (10 000→50 000) | ⚠️ Parcial — [AC03](AC03-escalabilidad.md) |
 | AC04 | Seguridad y privacidad | 100 % de los casos no autorizados rechazados; ZAP sin alertas de riesgo **alto**; sin PDF, códigos ni datos personales en respuestas públicas | Matriz Postman + ZAP + `composer audit` | AC04 |
 | AC05 | Integridad | Rechazo de duplicados, versiones viejas, pagos inválidos y PDF alterados (100 %); con 2 decisiones simultáneas solo 1 se aplica | PHPUnit en SQLite **y** MySQL + prueba k6 de concurrencia | AC05 |
 | AC06 | Trazabilidad | Cada operación probada deja responsable, acción, fecha y registro en `auditoria` (100 %) | Lista de operaciones + consultas SQL en DBeaver | AC06 |

@@ -14,8 +14,14 @@ class BusquedaPublicaService
             'MATRIMONIO' => ['matrimonio', 'fecha_matrimonio'],
             'DEFUNCION' => ['defuncion', 'fecha_defuncion'],
         };
-        $candidatas = Acta::with($relacion)->where('tipo', $datos['tipo'])->where('estado', Acta::ESTADO_REGISTRADA)
-            ->whereHas($relacion, fn ($q) => $q->whereDate($fecha, $datos['fecha']))->get();
+        // The event date is a DATE column: an exact, indexed match on the detail table first,
+        // then only those acts (instead of a DATE() subquery per act, which scans the table).
+        $tabla = (new Acta)->$relacion()->getRelated()->getTable();
+        // A whole-day range uses the index and also matches drivers that store a time part (SQLite).
+        $dia = \Illuminate\Support\Carbon::parse($datos['fecha'])->toDateString();
+        $ids = \Illuminate\Support\Facades\DB::table($tabla)->whereBetween($fecha, [$dia, $dia.' 23:59:59'])->pluck('acta_id');
+        $candidatas = $ids->isEmpty() ? collect() : Acta::with($relacion)->whereIn('id', $ids)
+            ->where('tipo', $datos['tipo'])->where('estado', Acta::ESTADO_REGISTRADA)->get();
         $buscado = $this->normalizar($datos['titular']);
         $coinciden = $candidatas->filter(fn ($acta) => $this->normalizar($acta->$relacion->apellido_nombre) === $buscado);
         if ($coinciden->count() !== 1) return null;

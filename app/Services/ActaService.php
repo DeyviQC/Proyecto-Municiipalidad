@@ -249,18 +249,14 @@ class ActaService
             $dni = $filtros['dni'] ?? null;
             $nombre = $filtros['nombre'] ?? null;
 
-            $query->where(function ($q) use ($dni, $nombre, $like) {
-                $q->orWhereHas('nacimiento', function ($sub) use ($dni, $nombre, $like) {
-                    $sub->when($dni, fn ($s) => $s->where('dni', 'like', $like($dni)))
-                        ->when($nombre, fn ($s) => $s->where('apellido_nombre', 'like', $like($nombre)));
-                })->orWhereHas('matrimonio', function ($sub) use ($dni, $nombre, $like) {
-                    $sub->when($dni, fn ($s) => $s->where('dni', 'like', $like($dni)))
-                        ->when($nombre, fn ($s) => $s->where('apellido_nombre', 'like', $like($nombre)));
-                })->orWhereHas('defuncion', function ($sub) use ($dni, $nombre, $like) {
-                    $sub->when($dni, fn ($s) => $s->where('dni', 'like', $like($dni)))
-                        ->when($nombre, fn ($s) => $s->where('apellido_nombre', 'like', $like($nombre)));
-                });
-            });
+            // Each detail table is searched once and only the matching act ids are kept.
+            // The previous "OR EXISTS (…)" ran three correlated subqueries for every act,
+            // which made the page count take ~0.8 s with 50 000 acts (AC03).
+            $detalle = fn (string $tabla) => DB::table($tabla)->select('acta_id')
+                ->when($dni, fn ($s) => $s->where('dni', 'like', $like($dni)))
+                ->when($nombre, fn ($s) => $s->where('apellido_nombre', 'like', $like($nombre)));
+            $ids = $detalle('acta_nacimientos')->union($detalle('acta_matrimonios'))->union($detalle('acta_defunciones'))->pluck('acta_id');
+            $query->whereIn('id', $ids->all());
         }
 
         if (! empty($filtros['sobre']) && ! empty($filtros['tipo'])) {

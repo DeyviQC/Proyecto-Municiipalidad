@@ -5,6 +5,10 @@ percentil 95, errores y concurrencia.
 
 **Veredicto: ✅ CUMPLE** — todas las operaciones con p95 < 1 s y 0 % de errores con 20 usuarios simultáneos.
 
+> Nota: después de esta medición, AC03 agregó índices y reescribió dos consultas (búsqueda pública 5.5× y
+> archivo por nombre 5.6× más rápidas con 50 000 actas). Los valores de AC01 corresponden a la versión
+> anterior y son, por tanto, conservadores.
+
 ## 1. Datos de la ejecución
 
 | Campo | Valor |
