@@ -68,6 +68,21 @@ class MejorasFlujoTest extends TestCase
         $this->assertSame('APROBADA', $t->fresh()->estado);
     }
 
+    public function test_una_decision_con_version_desactualizada_se_rechaza_sin_cambiar_nada(): void
+    {
+        Mail::fake();
+        $t = $this->tramite('PENDIENTE')->fresh();
+        $this->actingAs($this->asistente());
+        $vieja = $t->version;
+        // Another staff member decides first: the version moves on.
+        $this->patch(route('atencion.atender', $t), ['estado' => 'OBSERVADA', 'mensaje' => 'Adjunta tu DNI.', 'version' => $vieja])->assertSessionHasNoErrors();
+        // A second decision prepared with the old version must not overwrite it.
+        $this->patch(route('atencion.atender', $t), ['estado' => 'APROBADA', 'version' => $vieja])->assertSessionHasErrors('version');
+        $this->assertSame('OBSERVADA', $t->fresh()->estado);
+        $this->assertSame($vieja + 1, $t->fresh()->version);
+        $this->assertSame(1, $t->eventos()->count());
+    }
+
     public function test_sin_pagar_el_pago_aparece_primero(): void
     {
         $t = $this->tramite('PENDIENTE_PAGO', false);

@@ -7,6 +7,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * Archived civil-registry act (original scanned PDF plus its detail record).
+ *
+ * @property \Illuminate\Support\Carbon $fecha_acta
+ * @property string|null $firmado_ruta
+ * @property string|null $firmado_sha256
+ * @property string|null $firmado_original_hash
+ * @property string|null $firmado_firmante
+ * @property string|null $firmado_certificado_sha256
+ * @property \Illuminate\Support\Carbon|null $firmado_at
+ * @property int|null $firmado_por
+ * @property int|null $firmado_tramite_id
+ */
 class Acta extends Model
 {
     use HasFactory;
@@ -100,21 +113,25 @@ class Acta extends Model
         });
     }
 
+    /** @return BelongsTo<User, $this> */
     public function usuario(): BelongsTo
     {
         return $this->belongsTo(User::class, 'usuario_id');
     }
 
+    /** @return HasOne<ActaNacimiento, $this> */
     public function nacimiento(): HasOne
     {
         return $this->hasOne(ActaNacimiento::class);
     }
 
+    /** @return HasOne<ActaMatrimonio, $this> */
     public function matrimonio(): HasOne
     {
         return $this->hasOne(ActaMatrimonio::class);
     }
 
+    /** @return HasOne<ActaDefuncion, $this> */
     public function defuncion(): HasOne
     {
         return $this->hasOne(ActaDefuncion::class);
@@ -126,7 +143,6 @@ class Acta extends Model
             self::TIPO_NACIMIENTO => $this->nacimiento,
             self::TIPO_MATRIMONIO => $this->matrimonio,
             self::TIPO_DEFUNCION => $this->defuncion,
-            default => null,
         };
     }
 

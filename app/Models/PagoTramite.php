@@ -10,5 +10,6 @@ class PagoTramite extends Model
     protected $guarded = ['id'];
     protected $hidden = ['qr', 'idempotencia', 'mercadopago_checkout_url'];
     protected function casts(): array { return ['importe_centimos' => 'integer', 'expira_at' => 'datetime', 'pagado_at' => 'datetime']; }
-    public function tramite() { return $this->belongsTo(TramitePublico::class, 'tramite_publico_id'); }
+    /** @return \Illuminate\Database\Eloquent\Relations\BelongsTo<TramitePublico, $this> */
+    public function tramite(): \Illuminate\Database\Eloquent\Relations\BelongsTo { return $this->belongsTo(TramitePublico::class, 'tramite_publico_id'); }
 }

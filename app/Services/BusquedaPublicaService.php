@@ -13,6 +13,7 @@ class BusquedaPublicaService
             'NACIMIENTO' => ['nacimiento', 'fecha_nacimiento'],
             'MATRIMONIO' => ['matrimonio', 'fecha_matrimonio'],
             'DEFUNCION' => ['defuncion', 'fecha_defuncion'],
+            default => throw new \InvalidArgumentException('Tipo de acta no válido.'),
         };
         // The event date is a DATE column: an exact, indexed match on the detail table first,
         // then only those acts (instead of a DATE() subquery per act, which scans the table).

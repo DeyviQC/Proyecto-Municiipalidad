@@ -38,7 +38,7 @@ class CanalEntregaController extends Controller
             $t = TramitePublico::whereKey($id)->lockForUpdate()->firstOrFail();
             abort_unless($t->email_verificado_at && $t->pago?->estado === 'PAGADO', 403);
             $enlace = $consulta->enlace($t);
-            abort_unless($enlace, 404);
+            abort_unless($enlace !== null, 404);
             $previas = $t->datos['canales_entrega'] ?? [];
             $preferencias = array_merge($previas, ['correo' => (bool) ($previas['correo'] ?? false), 'whatsapp' => true,
                 'whatsapp_iniciado_at' => $previas['whatsapp_iniciado_at'] ?? now()->toIso8601String(), 'fecha' => now()->toIso8601String()]);

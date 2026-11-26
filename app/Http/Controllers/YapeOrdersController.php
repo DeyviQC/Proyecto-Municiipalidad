@@ -36,7 +36,9 @@ class YapeOrdersController extends Controller
         ]);
         if (!$yape->disponible()) return back()->with('error', 'Falta configurar la Public Key de prueba de Mercado Pago.');
         try {
-            $resultado = Cache::store('file')->lock('mp-checkout:'.$t->id, 90)->block(3, function () use ($t, $yape, $input) {
+            $bloqueos = Cache::store('file')->getStore();
+            if (! $bloqueos instanceof \Illuminate\Contracts\Cache\LockProvider) throw new \RuntimeException('El almacén de caché no admite bloqueos.');
+            $resultado = $bloqueos->lock('mp-checkout:'.$t->id, 90)->block(3, function () use ($t, $yape, $input) {
                 $pago = DB::transaction(function () use ($t) {
                     $actual = TramitePublico::lockForUpdate()->findOrFail($t->id);
                     abort_unless($actual->estado === 'PENDIENTE_PAGO', 409);

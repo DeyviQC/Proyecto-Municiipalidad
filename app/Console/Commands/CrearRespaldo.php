@@ -33,7 +33,7 @@ class CrearRespaldo extends Command
 
         $ok = true;
         if (! $this->option('solo-archivos')) {
-            $ok = $this->respaldarBaseDatos($destino.'/base-datos') && $ok;
+            $ok = $this->respaldarBaseDatos($destino.'/base-datos');
             $this->limpiarVolcadosAntiguos($destino.'/base-datos');
         }
         $ok = $this->respaldarClave($destino) && $ok;

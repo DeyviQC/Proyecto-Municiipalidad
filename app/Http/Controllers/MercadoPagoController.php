@@ -25,7 +25,9 @@ class MercadoPagoController extends Controller
         abort_unless($tramite->identidad_estado === 'DATOS_CONTRASTADOS', 409);
         if (!$mp->disponible()) return redirect()->route('portal.estado')->with('error', 'Mercado Pago aún no está habilitado para las pruebas. No se realizó ningún cobro.');
         try {
-            return Cache::store('file')->lock('mp-checkout:'.$tramite->id, 45)->block(3, function () use ($tramite, $mp) {
+            $bloqueos = Cache::store('file')->getStore();
+            if (! $bloqueos instanceof \Illuminate\Contracts\Cache\LockProvider) throw new \RuntimeException('El almacén de caché no admite bloqueos.');
+            return $bloqueos->lock('mp-checkout:'.$tramite->id, 45)->block(3, function () use ($tramite, $mp) {
                 $pago = DB::transaction(function () use ($tramite) {
                     $actual = TramitePublico::lockForUpdate()->findOrFail($tramite->id);
                     abort_unless($actual->estado === 'PENDIENTE_PAGO', 409);

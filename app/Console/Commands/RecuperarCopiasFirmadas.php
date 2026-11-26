@@ -28,7 +28,7 @@ class RecuperarCopiasFirmadas extends Command
             foreach ($lista as $t) {
                 $e = $t->datos['entrega'] ?? [];
                 $acta = $t->acta;
-                if (! $acta || empty($e['revision']) || empty($e['firmado_ruta']) || ! empty($e['reutilizada'])
+                if (empty($e['revision']) || empty($e['firmado_ruta']) || ! empty($e['reutilizada'])
                     || ($e['preparado_ruta'] ?? null) !== $acta->pdf_ruta || ! $acta->pdf_hash
                     || ! $disk->exists($e['firmado_ruta']) || ! hash_equals((string) ($e['firmado_sha256'] ?? ''), hash_file('sha256', $disk->path($e['firmado_ruta'])))) {
                     continue;

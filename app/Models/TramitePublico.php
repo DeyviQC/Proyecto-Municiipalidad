@@ -3,7 +3,31 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\{BelongsTo, HasMany, HasOne};
 
+/**
+ * Citizen request from the public portal.
+ *
+ * @property int $id
+ * @property string $codigo
+ * @property int $acta_id
+ * @property string $estado
+ * @property int $version
+ * @property array<string, mixed> $datos Encrypted at rest (encrypted:array).
+ * @property string $email
+ * @property string|null $dni_hash
+ * @property string|null $identidad_estado
+ * @property string|null $otp_hash
+ * @property \Illuminate\Support\Carbon|null $email_verificado_at
+ * @property \Illuminate\Support\Carbon|null $otp_expira_at
+ * @property \Illuminate\Support\Carbon|null $otp_enviado_at
+ * @property \Illuminate\Support\Carbon|null $aceptado_at
+ * @property \Illuminate\Support\Carbon $created_at
+ * @property \Illuminate\Support\Carbon $updated_at
+ * @property-read Acta $acta
+ * @property-read PagoTramite|null $pago
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, TramiteEvento> $eventos
+ */
 class TramitePublico extends Model
 {
     protected $table = 'tramites_publicos';
@@ -65,7 +89,10 @@ class TramitePublico extends Model
     {
         return ['datos' => 'encrypted:array', 'aceptado_at' => 'datetime', 'otp_expira_at' => 'datetime', 'otp_enviado_at' => 'datetime', 'email_verificado_at' => 'datetime'];
     }
-    public function acta() { return $this->belongsTo(Acta::class); }
-    public function pago() { return $this->hasOne(PagoTramite::class); }
-    public function eventos() { return $this->hasMany(TramiteEvento::class)->orderBy('id'); }
+    /** @return BelongsTo<Acta, $this> */
+    public function acta(): BelongsTo { return $this->belongsTo(Acta::class); }
+    /** @return HasOne<PagoTramite, $this> */
+    public function pago(): HasOne { return $this->hasOne(PagoTramite::class); }
+    /** @return HasMany<TramiteEvento, $this> */
+    public function eventos(): HasMany { return $this->hasMany(TramiteEvento::class)->orderBy('id'); }
 }

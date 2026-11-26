@@ -48,7 +48,10 @@ class AppServiceProvider extends ServiceProvider
                     $config['scheme'] ?? 'smtp', $config['host'], $config['username'] ?? null,
                     $config['password'] ?? null, $config['port'] ?? 587, $config
                 ));
-                $stream = $transport->getStream();
+                $stream = $transport instanceof \Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport ? $transport->getStream() : null;
+                if (! $stream instanceof \Symfony\Component\Mailer\Transport\Smtp\Stream\SocketStream) {
+                    throw new \RuntimeException('El transporte SMTP no admite la configuración TLS requerida.');
+                }
                 $options = $stream->getStreamOptions();
                 $options['ssl'] = array_merge($options['ssl'] ?? [], [
                     'cafile' => $config['cafile'], 'verify_peer' => true, 'verify_peer_name' => true,

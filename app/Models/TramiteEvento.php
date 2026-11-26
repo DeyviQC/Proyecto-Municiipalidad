@@ -12,7 +12,8 @@ class TramiteEvento extends Model
     protected $guarded = ['id'];
     protected function casts(): array { return ['created_at' => 'datetime']; }
 
-    public function tramite() { return $this->belongsTo(TramitePublico::class, 'tramite_publico_id'); }
+    /** @return \Illuminate\Database\Eloquent\Relations\BelongsTo<TramitePublico, $this> */
+    public function tramite(): \Illuminate\Database\Eloquent\Relations\BelongsTo { return $this->belongsTo(TramitePublico::class, 'tramite_publico_id'); }
 
     protected static function booted(): void
     {

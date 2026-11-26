@@ -73,6 +73,7 @@ class ActaController extends Controller
             Acta::TIPO_NACIMIENTO => (new StoreNacimientoRequest())->rules(),
             Acta::TIPO_MATRIMONIO => (new StoreMatrimonioRequest())->rules(),
             Acta::TIPO_DEFUNCION => (new StoreDefuncionRequest())->rules(),
+            default => abort(422, 'Tipo de acta no válido.'),
         };
 
         $datosDetalle = array_intersect_key($datosActa, $reglasDetalle);

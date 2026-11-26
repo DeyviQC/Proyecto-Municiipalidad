@@ -6,6 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property \Illuminate\Support\Carbon|null $fecha_nacimiento
+ * @property string|null $madre_dni_estado
+ * @property string|null $padre_dni_estado
+ * @property string|null $madre_dni
+ * @property string|null $padre_dni
+ * @property int|null $filiacion_version
+ */
 class ActaNacimiento extends Model
 {
     use HasFactory;

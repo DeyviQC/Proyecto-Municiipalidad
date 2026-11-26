@@ -32,7 +32,7 @@ class ReporteController extends Controller
         } else {
             $q = Acta::with(['nacimiento', 'defuncion', 'matrimonio', 'usuario']);
             foreach (['tipo', 'anio', 'sobre', 'correlativo', 'usuario_id'] as $campo) {
-                if (isset($f[$campo]) && $f[$campo] !== null && $f[$campo] !== '') { $q->where($campo, $f[$campo]); }
+                if (isset($f[$campo]) && $f[$campo] !== '') { $q->where($campo, $f[$campo]); }
             }
             foreach (['fecha_desde' => '>=', 'fecha_hasta' => '<='] as $campo => $op) {
                 if (! empty($f[$campo])) { $q->whereDate('fecha_acta', $op, $f[$campo]); }
@@ -61,7 +61,7 @@ class ReporteController extends Controller
                     continue;
                 }
                 $d = $acta->detalle();
-                $filas[] = [$acta->orden_tipo, $acta->numero_acta, $acta->tipo, $acta->fecha_acta->format('d/m/Y'), $d?->apellido_nombre ?? '', $d?->dni_no_consignado ? 'No consignado en el acta' : ($d?->dni ?? ''), $acta->sobre, $acta->correlativo, $disponible ? 'Disponible' : 'Pendiente', $acta->usuario?->name ?? ''];
+                $filas[] = [$acta->orden_tipo, $acta->numero_acta, $acta->tipo, $acta->fecha_acta->format('d/m/Y'), $d?->apellido_nombre ?? '', $d?->getAttribute('dni_no_consignado') ?'No consignado en el acta' : ($d?->dni ?? ''), $acta->sobre, $acta->correlativo, $disponible ? 'Disponible' : 'Pendiente', $acta->usuario?->name ?? ''];
             }
             if ($reporte === 'sobres') {
                 $cabeceras = ['Tipo de acta','Sobre','Actas','Con PDF','Sin PDF','Espacios libres','Ocupación'];
