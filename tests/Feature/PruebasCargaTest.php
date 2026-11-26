@@ -27,6 +27,15 @@ class PruebasCargaTest extends TestCase
         for ($i = 0; $i < 8; $i++) $this->buscar(['X-Prueba-Carga' => 'clave-de-carga-de-prueba'])->assertStatus(302);
     }
 
+    public function test_cada_ruta_tiene_su_propio_contador_de_intentos(): void
+    {
+        // Using other limited routes must not consume the search allowance (shared counter bug).
+        for ($i = 0; $i < 4; $i++) $this->get('/tramite/acceso/'.\Illuminate\Support\Str::uuid().'?signature=x')->assertRedirect();
+        for ($i = 0; $i < 3; $i++) $this->get(route('portal.documento'))->assertRedirect();
+        for ($i = 0; $i < 5; $i++) $this->buscar()->assertStatus(302);
+        $this->buscar()->assertStatus(429);
+    }
+
     public function test_en_produccion_o_sin_clave_configurada_no_hay_excepcion(): void
     {
         config(['pruebas.carga_token' => null]);

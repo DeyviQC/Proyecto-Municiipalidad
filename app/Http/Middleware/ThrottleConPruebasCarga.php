@@ -21,6 +21,13 @@ class ThrottleConPruebasCarga extends ThrottleRequests
             return $next($request);
         }
 
+        // Laravel keys inline limits ("throttle:5,1") only by IP unless a prefix is given, so every
+        // route shared ONE counter: downloading a PDF used up search and tracking attempts (found
+        // by the AC04 matrix). Give each inline limit its own counter, scoped to its route.
+        if (isset($parametros[0]) && is_numeric($parametros[0]) && count($parametros) < 3) {
+            $parametros = [$parametros[0], $parametros[1] ?? 1, ($request->route()?->getName() ?? $request->path()).'|'];
+        }
+
         return parent::handle($request, $next, ...$parametros);
     }
 

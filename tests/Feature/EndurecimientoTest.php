@@ -67,6 +67,21 @@ class EndurecimientoTest extends TestCase
         $this->post('/pagos/taypi/notificacion')->assertNotFound();
     }
 
+    public function test_las_respuestas_llevan_cabeceras_de_seguridad_y_no_revelan_php(): void
+    {
+        $r = $this->get(route('portal.inicio'))->assertOk()
+            ->assertHeader('X-Frame-Options', 'SAMEORIGIN')
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+            ->assertHeaderMissing('X-Powered-By')
+            ->assertHeaderMissing('Strict-Transport-Security'); // only over HTTPS
+        $csp = $r->headers->get('Content-Security-Policy');
+        foreach (["frame-ancestors 'self'", "object-src 'none'", "base-uri 'self'", "default-src 'self'"] as $directiva) {
+            $this->assertStringContainsString($directiva, $csp);
+        }
+        $this->get('https://localhost/tramite')->assertHeader('Strict-Transport-Security');
+    }
+
     public function test_verificacion_del_sistema_detecta_configuracion_insegura(): void
     {
         config(['respaldo.frase' => null, 'queue.default' => 'sync']);
