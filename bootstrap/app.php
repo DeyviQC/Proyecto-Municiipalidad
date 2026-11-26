@@ -20,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureUserHasRole::class,
             'active' => EnsureUserIsActive::class,
             'portal.acceso' => \App\Http\Middleware\EnsurePortalAccess::class,
+            // Same limits as Laravel's throttle; only load tests may skip them (never in production).
+            'throttle' => \App\Http\Middleware\ThrottleConPruebasCarga::class,
         ]);
 
         $middleware->web(append: [
