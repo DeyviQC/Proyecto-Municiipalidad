@@ -91,6 +91,8 @@ Route::middleware(['auth', 'role:administrador,asistente'])->group(function () {
     Route::get('/atencion-ciudadana/{tramite}/firma/{tipo}', [\App\Http\Controllers\EntregaDocumentoController::class, 'archivo'])->name('entrega.archivo');
     Route::post('/atencion-ciudadana/{tramite}/firma/cargar', [\App\Http\Controllers\EntregaDocumentoController::class, 'cargar'])->middleware('throttle:10,1')->name('entrega.cargar');
     Route::post('/atencion-ciudadana/{tramite}/firma/publicar', [\App\Http\Controllers\EntregaDocumentoController::class, 'publicar'])->name('entrega.publicar');
+    Route::post('/atencion-ciudadana/{tramite}/firma/reutilizar', [\App\Http\Controllers\EntregaDocumentoController::class, 'reutilizar'])->middleware('throttle:10,1')->name('entrega.reutilizar');
+    Route::get('/actas/{acta}/pdf-firmado', [PdfController::class, 'firmado'])->name('actas.pdf-firmado');
     Route::post('/atencion-ciudadana/{tramite}/firma/descartar', [\App\Http\Controllers\EntregaDocumentoController::class, 'descartar'])->name('entrega.descartar');
     Route::post('/atencion-ciudadana/{tramite}/firma-peru/iniciar', [\App\Http\Controllers\FirmaPeruController::class, 'iniciar'])->middleware('throttle:5,1')->name('firmaperu.iniciar');
     Route::get('/atencion-ciudadana/{tramite}/firma-peru/estado', [\App\Http\Controllers\FirmaPeruController::class, 'estado'])->name('firmaperu.estado');

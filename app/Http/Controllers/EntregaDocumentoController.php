@@ -117,8 +117,80 @@ class EntregaDocumentoController extends Controller
             $actual->datos = array_merge($actual->datos, ['entrega' => $entrega]);
             $actual->transicionar('LISTA', 'Tu documento firmado está disponible para descargar en este seguimiento.', $request->user()->id);
             $audit->registrar('PUBLICAR_DOCUMENTO', 'Portal ciudadano', $actual->id, 'Documento disponible en seguimiento protegido.');
+            $this->guardarCopiaEnActa($actual, $entrega, $request->user()->id);
         });
-        $mensaje = 'Documento publicado. El ciudadano ya puede descargarlo y recibió el aviso.';
+        return $this->trasPublicar($tramite, 'Documento publicado. El ciudadano ya puede descargarlo y recibió el aviso.');
+    }
+
+    /**
+     * Delivers the act's stored signed copy (already reviewed in an earlier request)
+     * without signing again: its signature and integrity are verified once more
+     * against the current original before publishing.
+     */
+    public function reutilizar(Request $request, TramitePublico $tramite, FirmaDocumentoService $firma, AuditoriaService $audit)
+    {
+        $request->validate(['version' => 'required|integer']);
+        $rutaGuardada = null;
+        try {
+            DB::transaction(function () use ($request, $tramite, $firma, $audit, &$rutaGuardada) {
+                $actual = TramitePublico::lockForUpdate()->findOrFail($tramite->id);
+                $this->disponible($actual);
+                if ($actual->version !== $request->integer('version') || isset($actual->datos['entrega']['firmado_ruta'])) {
+                    throw ValidationException::withMessages(['firma' => 'La solicitud cambió o ya tiene un PDF firmado. Recarga la página.']);
+                }
+                $acta = \App\Models\Acta::lockForUpdate()->findOrFail($actual->acta_id);
+                if (! $acta->copiaFirmadaVigente()) {
+                    throw ValidationException::withMessages(['firma' => 'La copia firmada de esta acta ya no está vigente. Firma una copia nueva.']);
+                }
+                $disk = Storage::disk('local');
+                $entrega = $firma->prepararOriginal($actual);
+                $pdf = $disk->get($acta->firmado_ruta);
+                // Also re-checks that the signing certificate is still within its validity.
+                $resultado = $firma->verificar($pdf, $disk->get($entrega['preparado_ruta']));
+                $rutaGuardada = 'private/entregas/'.$actual->id.'/'.Str::uuid().'-firmado.pdf';
+                if (! $disk->put($rutaGuardada, $pdf)) throw new \RuntimeException('No se pudo guardar el documento.');
+                $origen = str_pad((string) $acta->firmado_tramite_id, 6, '0', STR_PAD_LEFT);
+                $entrega = array_merge($entrega, $resultado, [
+                    'firmado_ruta' => $rutaGuardada, 'firmado_sha256' => hash('sha256', $pdf),
+                    'cargado_por' => $request->user()->id, 'cargado_at' => now()->toIso8601String(),
+                    'reutilizada' => ['tramite_id' => $acta->firmado_tramite_id, 'firmado_at' => $acta->firmado_at->toIso8601String()],
+                    'revision' => ['usuario_id' => $request->user()->id, 'fecha' => now()->toIso8601String(),
+                        'sustento' => 'Copia firmada por '.$resultado['firmante'].' el '.$acta->firmado_at->format('d/m/Y')
+                            .', revisada al entregarse la solicitud N.º '.$origen.'; se verificó de nuevo su firma e integridad.'],
+                ]);
+                $actual->datos = array_merge($actual->datos, ['entrega' => $entrega]);
+                $actual->transicionar('LISTA', 'Tu documento firmado está disponible para descargar en este seguimiento.', $request->user()->id);
+                $audit->registrar('REUTILIZAR_COPIA_FIRMADA', 'Portal ciudadano', $actual->id, 'Copia firmada del acta '.$acta->id.' entregada sin nueva firma.');
+            });
+        } catch (\Throwable $e) {
+            if ($rutaGuardada) Storage::disk('local')->delete($rutaGuardada);
+            throw $e;
+        }
+        return $this->trasPublicar($tramite, 'Documento entregado con la copia ya firmada. El ciudadano ya puede descargarlo y recibió el aviso.');
+    }
+
+    /** Keeps a copy signed over the unmodified original on the act, for later requests. */
+    private function guardarCopiaEnActa(TramitePublico $actual, array $entrega, int $usuarioId): void
+    {
+        $acta = \App\Models\Acta::lockForUpdate()->find($actual->acta_id);
+        // Stamped drafts carry this request's number: only a signature over the archive file is reusable.
+        if (! $acta || ($entrega['preparado_ruta'] ?? null) !== $acta->pdf_ruta || ! $acta->pdf_hash) return;
+        $disk = Storage::disk('local');
+        $ruta = 'private/actas-firmadas/'.$acta->id.'/'.Str::uuid().'.pdf';
+        if (! $disk->copy($entrega['firmado_ruta'], $ruta)) return;
+        $anterior = $acta->firmado_ruta;
+        $acta->forceFill([
+            'firmado_ruta' => $ruta, 'firmado_sha256' => $entrega['firmado_sha256'], 'firmado_original_hash' => $acta->pdf_hash,
+            'firmado_firmante' => $entrega['firmante'] ?? null, 'firmado_certificado_sha256' => $entrega['certificado_sha256'] ?? null,
+            'firmado_at' => now(), 'firmado_por' => $usuarioId, 'firmado_tramite_id' => $actual->id,
+        ])->save();
+        // Earlier signed copies stay on disk for the audit trail; only the reference moves.
+        app(AuditoriaService::class)->registrar('ACTUALIZAR_COPIA_FIRMADA', 'Registro Civil', $acta->id,
+            'Copia firmada vigente actualizada desde la solicitud '.$actual->id.($anterior ? ' (reemplaza la anterior).' : '.'));
+    }
+
+    private function trasPublicar(TramitePublico $tramite, string $mensaje)
+    {
         // If the citizen asked for e-mail delivery, send it now instead of needing another click.
         try {
             if (app(\App\Services\EnvioDocumentoCorreo::class)->enviar($tramite->id, 'PDF firmado enviado automáticamente al publicar, a petición del ciudadano.')) {

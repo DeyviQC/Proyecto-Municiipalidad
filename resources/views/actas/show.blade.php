@@ -88,6 +88,11 @@
                     <a href="{{ route('actas.pdf.visor', $acta) }}" class="btn btn-outline-secondary">
                         <i class="bi bi-file-earmark-pdf me-1"></i> Ver PDF adjunto
                     </a>
+                    @if($acta->firmado_ruta)
+                    <a href="{{ route('actas.pdf-firmado', $acta) }}" target="_blank" rel="noopener" class="btn {{ $acta->copiaFirmadaVigente() ? 'btn-success' : 'btn-outline-secondary' }}">
+                        <i class="bi bi-patch-check me-1"></i> Copia firmada
+                    </a>
+                    @endif
 
                     <a href="{{ route('actas.index') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left me-1"></i> Volver

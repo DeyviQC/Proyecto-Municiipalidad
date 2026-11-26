@@ -44,7 +44,32 @@ class Acta extends Model
             'orden_tipo' => 'integer',
             'correlativo' => 'integer',
             'pdf_tamano' => 'integer',
+            'firmado_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Whether the stored signed copy can be delivered again without a new signature:
+     * the original is unchanged since it was signed, the file is intact, and it is
+     * not older than the configured validity (0 = no limit).
+     */
+    public function copiaFirmadaVigente(): bool
+    {
+        if (! $this->firmado_ruta || ! $this->firmado_at || ! $this->pdf_hash
+            || ! hash_equals((string) $this->firmado_original_hash, (string) $this->pdf_hash)) {
+            return false;
+        }
+        $dias = (int) config('firma.vigencia_copia_dias', 90);
+        if ($dias > 0 && $this->firmado_at->lt(now()->subDays($dias))) return false;
+        $disk = \Illuminate\Support\Facades\Storage::disk('local');
+        return $disk->exists($this->firmado_ruta)
+            && hash_equals((string) $this->firmado_sha256, hash_file('sha256', $disk->path($this->firmado_ruta)));
+    }
+
+    public function copiaFirmadaVenceEl(): ?\Illuminate\Support\Carbon
+    {
+        $dias = (int) config('firma.vigencia_copia_dias', 90);
+        return $this->firmado_at && $dias > 0 ? $this->firmado_at->copy()->addDays($dias) : null;
     }
 
     protected function performInsert(\Illuminate\Database\Eloquent\Builder $query)

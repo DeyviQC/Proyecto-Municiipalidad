@@ -19,7 +19,7 @@ class FiliacionTest extends TestCase
         $usuario->roles()->attach(Role::where('slug', 'asistente')->firstOrFail());
         $acta = Acta::factory()->create();
         $nacimiento = ActaNacimiento::create(['acta_id' => $acta->id, 'apellido_nombre' => 'Titular de Prueba', 'dni' => '12345678', 'fecha_nacimiento' => '2020-01-01']);
-        $original = $acta->getAttributes();
+        $original = $acta->fresh()->getAttributes();
         $datos = ['filiacion_version' => 0, 'madre_nombre_estado' => 'REGISTRADO', 'madre_nombre' => 'Madre de Prueba', 'madre_dni_estado' => 'REGISTRADO', 'madre_dni' => '23456789', 'padre_nombre_estado' => 'REGISTRADO', 'padre_nombre' => 'Padre de Prueba', 'padre_dni_estado' => 'DESCONOCIDO', 'padre_dni' => '99999999', 'apellido_nombre' => 'No se permite cambiar', 'orden_tipo' => 999];
         $this->actingAs($usuario)->get('/actas/'.$acta->id.'/filiacion')->assertOk();
         $this->patch('/actas/'.$acta->id.'/filiacion', array_replace($datos, ['madre_dni' => '123']))->assertSessionHasErrors('madre_dni');

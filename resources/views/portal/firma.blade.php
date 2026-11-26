@@ -16,6 +16,21 @@
 @include('portal.canales-entrega')
 
 @elseif(! $firmado)
+@php($acta = $tramite->acta)
+@php($reusable = (bool) $acta?->copiaFirmadaVigente())
+@if($reusable)
+<div class="border border-success rounded-3 p-3 mb-3" style="background:#e9f7ef">
+  <strong class="d-block"><i class="bi bi-patch-check-fill text-success me-1" aria-hidden="true"></i>Esta acta ya tiene una copia firmada</strong>
+  <p class="small mb-2">Firmada por <strong>{{ $acta->firmado_firmante ?? 'el funcionario' }}</strong> el {{ $acta->firmado_at->format('d/m/Y') }}@if($acta->firmado_tramite_id) (solicitud N.º {{ str_pad((string) $acta->firmado_tramite_id, 6, '0', STR_PAD_LEFT) }})@endif.@if($vence = $acta->copiaFirmadaVenceEl()) Se puede volver a entregar hasta el {{ $vence->format('d/m/Y') }}.@endif</p>
+  <form method="POST" action="{{ route('entrega.reutilizar', $tramite) }}" data-confirm="¿Entregar la copia ya firmada? El ciudadano podrá descargarla y recibirá el aviso.">@csrf
+    <input type="hidden" name="version" value="{{ $tramite->version }}">
+    <button class="btn btn-success btn-lg w-100"><i class="bi bi-send-check me-2" aria-hidden="true"></i>Entregar con la copia ya firmada</button>
+  </form>
+  <a class="small d-inline-block mt-2" href="{{ route('actas.pdf-firmado', $acta) }}" target="_blank" rel="noopener">Ver copia firmada ↗</a>
+  <p class="review-muted small mt-1 mb-0">Se vuelve a comprobar la firma y que el acta no haya cambiado. No necesitas Firma Perú.</p>
+</div>
+<details class="mb-2"><summary class="small review-muted">Prefiero firmar una copia nueva</summary><div class="mt-3">
+@endif
 <div class="manual-sign">
   <div class="d-flex gap-3 mb-3">
     <span class="badge rounded-circle bg-success d-flex align-items-center justify-content-center flex-shrink-0" style="width:2rem;height:2rem">1</span>
@@ -47,6 +62,7 @@
     </form>
   </div>
 </div>
+@if($reusable)</div></details>@endif
 
 @else
 <h3 class="h5">Revisa y publica</h3>
@@ -59,6 +75,7 @@
     <textarea id="sustento_firma" name="sustento_firma" class="form-control mt-2" rows="3" minlength="15" maxlength="1500" required>{{ old('sustento_firma', 'Se revisó el contenido del acta y la firma digital de '.$entrega['firmante'].' el '.now()->format('d/m/Y').'; certificado vigente y firmante autorizado.') }}</textarea>
   </details>
   <button class="btn btn-success btn-lg w-100"><i class="bi bi-send-check me-2" aria-hidden="true"></i>Publicar y entregar</button>
+  @if(($entrega['preparado_ruta'] ?? null) === $tramite->acta?->pdf_ruta)<p class="review-muted small mt-2 mb-0"><i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Esta copia quedará guardada en el acta: las próximas solicitudes se entregan sin volver a firmar.</p>@endif
   <p class="review-muted small mt-2 mb-0">Se avisará al ciudadano{{ !empty($tramite->datos['canales_entrega']['correo']) ? ' y se le enviará el PDF por correo' : '' }} automáticamente.</p>
 </form>
 <details class="review-details mt-3"><summary>Subí un archivo equivocado</summary><form class="mt-3" method="POST" action="{{ route('entrega.descartar', $tramite) }}" data-confirm="¿Retirar este PDF? Tendrás que subir el correcto.">@csrf<input type="hidden" name="version" value="{{ $tramite->version }}"><label for="motivo_descarte" class="form-label">Motivo</label><textarea id="motivo_descarte" name="motivo_descarte" minlength="10" maxlength="500" class="form-control mb-3" required placeholder="Ej.: se subió el PDF sin firmar"></textarea><button class="btn btn-outline-danger w-100">Retirar y subir otro</button></form></details>
